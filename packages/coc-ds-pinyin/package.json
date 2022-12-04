@@ -1,6 +1,6 @@
 {
   "name": "coc-ds-pinyin-lsp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "pinyin input support for (Neo)vim",
   "author": "iamcco <ooiss@qq.com>",
   "license": "MIT",

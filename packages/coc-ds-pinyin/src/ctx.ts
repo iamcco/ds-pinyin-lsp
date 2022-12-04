@@ -6,8 +6,8 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import which from 'which';
-import { extensionName } from './constant';
-import { downloadServer, getLatestRelease } from './downloader';
+import { dbName, dbTag, extensionName } from './constant';
+import { downloadServer, getLatestRelease, getPlatform } from './downloader';
 
 export class Ctx {
   client!: LanguageClient;
@@ -87,7 +87,7 @@ export class Ctx {
     return bin;
   }
 
-  async checkUpdate(auto = true) {
+  async checkUpdate(type: 'db' | typeof extensionName = extensionName, auto = true) {
     const config = workspace.getConfiguration(extensionName);
     if (config.get('server-path')) {
       // no update checking if using custom server
@@ -98,47 +98,46 @@ export class Ctx {
       return;
     }
 
-    const latest = await getLatestRelease();
+    const latest = await getLatestRelease(type === 'db' ? dbName : getPlatform(), type === 'db' ? dbTag : undefined);
     if (!latest) {
       return;
     }
 
-    const old = this.extCtx.globalState.get('release') || 'unknown release';
+    const old = this.extCtx.globalState.get(type === 'db' ? 'release-db' : 'release') || 'unknown release';
     if (old === latest.tag) {
       if (!auto) {
-        window.showInformationMessage(`Your ${extensionName} release is updated`);
+        window.showInformationMessage(`Your ${type} release is updated`);
       }
       return;
     }
 
-    const msg = `${extensionName} has a new release: ${latest.tag}, you're using ${old}. Would you like to download from GitHub`;
+    const msg = `${type} has a new release: ${latest.tag}, you're using ${old}. Would you like to download from GitHub`;
     let ret = 0;
     if (config.get('prompt', true)) {
-      ret = await window.showQuickpick(
-        ['Yes, download the latest ${extensionName}', 'Check GitHub releases', 'Cancel'],
-        msg,
-      );
+      ret = await window.showQuickpick(['Yes, download the latest ${type}', 'Check GitHub releases', 'Cancel'], msg);
     }
     if (ret === 0) {
       if (process.platform === 'win32') {
         await this.client.stop();
       }
       try {
-        await downloadServer(this.extCtx, latest);
+        await downloadServer(this.extCtx, latest, type === 'db');
       } catch (e) {
         console.error(e);
-        let msg = `Upgrade ${extensionName} failed, please try again`;
+        let msg = `Upgrade ${type} failed, please try again`;
         const err = e as any;
         if (err.code === 'EBUSY' || err.code === 'ETXTBSY' || err.code === 'EPERM') {
-          msg = `Upgrade ${extensionName} failed, other Vim instances might be using it, you should close them and try again`;
+          msg = `Upgrade ${type} failed, other Vim instances might be using it, you should close them and try again`;
         }
         window.showInformationMessage(msg, 'error');
         return;
       }
-      await this.client.stop();
-      this.client.start();
+      if (type === extensionName) {
+        await this.client.stop();
+        this.client.start();
+      }
 
-      this.extCtx.globalState.update('release', latest.tag);
+      this.extCtx.globalState.update(type === 'db' ? 'release-db' : 'release', latest.tag);
     } else if (ret === 1) {
       await commands.executeCommand('vscode.open', `https://github.com/iamcco/${extensionName}/releases`).catch(() => {
         //

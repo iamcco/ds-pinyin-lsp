@@ -74,7 +74,7 @@ function isMusl(): boolean {
   return res.stderr != null && res.stderr.indexOf('musl libc') >= 0;
 }
 
-function getPlatform(): string | undefined {
+export function getPlatform(): string | undefined {
   const platforms: { [key: string]: string } = {
     'ia32 win32': 'x86_64-pc-windows-msvc',
     'x64 win32': 'x86_64-pc-windows-msvc',
@@ -92,8 +92,10 @@ function getPlatform(): string | undefined {
   return platform;
 }
 
-export async function getLatestRelease(): Promise<ReleaseTag | undefined> {
-  const releaseURL = `https://api.github.com/repos/iamcco/${extensionName}/releases/latest`;
+export async function getLatestRelease(assetName?: string, releaseTag?: string): Promise<ReleaseTag | undefined> {
+  const releaseURL = !releaseTag
+    ? `https://api.github.com/repos/iamcco/${extensionName}/releases/latest`
+    : `https://api.github.com/repos/iamcco/${extensionName}/releases/tags${releaseTag}`;
   const response = await fetch(releaseURL, { agent });
   if (!response.ok) {
     console.error(await response.text());
@@ -101,12 +103,11 @@ export async function getLatestRelease(): Promise<ReleaseTag | undefined> {
   }
 
   const release = (await response.json()) as GithubRelease;
-  const platform = getPlatform();
-  if (!platform) {
+  if (!assetName) {
     console.error(`Unfortunately we don't ship binaries for your platform yet.`);
     return;
   }
-  const asset = release.assets.find((val) => val.browser_download_url.endsWith(`${platform}.gz`));
+  const asset = release.assets.find((val) => val.browser_download_url.endsWith(`${assetName}.gz`));
   if (!asset) {
     console.error(`getLatestRelease failed: ${release}`);
     return;
@@ -118,7 +119,7 @@ export async function getLatestRelease(): Promise<ReleaseTag | undefined> {
   return { asset, tag, url: asset.browser_download_url, name: name };
 }
 
-export async function downloadServer(context: ExtensionContext, release: ReleaseTag): Promise<void> {
+export async function downloadServer(context: ExtensionContext, release: ReleaseTag, isDb = true): Promise<void> {
   const statusItem = window.createStatusBarItem(0, { progress: true });
   statusItem.text = `Downloading ${extensionName} ${release.tag}`;
   statusItem.show();
@@ -156,7 +157,12 @@ export async function downloadServer(context: ExtensionContext, release: Release
   });
   await fs.rename(tempFile, _path);
 
-  await context.globalState.update('release', release.tag);
+  await context.globalState.update(isDb ? 'release-db' : 'release', release.tag);
+
+  if (isDb) {
+    statusItem.hide();
+    return;
+  }
 
   try {
     if (await fs.stat('/etc/nixos')) {
