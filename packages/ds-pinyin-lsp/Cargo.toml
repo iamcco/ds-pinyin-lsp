@@ -10,6 +10,7 @@ lsp-document = "0.6.0"
 tokio = { version = "1.17.0", features = ["full"] }
 tower-lsp = { version = "0.17.0"}
 dashmap = "5.1.0"
+regex = "1.7.0"
 # `bundled` causes us to automatically compile and link in an up to date
 # version of SQLite for you. This avoids many common build issues, and
 # avoids depending on the version of SQLite on the users system (or your

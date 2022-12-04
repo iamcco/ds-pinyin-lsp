@@ -2,6 +2,10 @@
   "cSpell.words": [
     "chumsky",
     "dashmap",
-    "ropey"
+    "hanzi",
+    "mapref",
+    "ropey",
+    "rusqlite",
+    "substr"
   ]
 }

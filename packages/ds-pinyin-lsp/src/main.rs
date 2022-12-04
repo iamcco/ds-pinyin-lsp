@@ -1,5 +1,8 @@
 use dashmap::DashMap;
+use ds_pinyin_lsp::utils::{get_pinyin, get_pre_line, query_dict, query_words};
 use lsp_document::{apply_change, IndexedText, TextAdapter};
+use rusqlite::Connection;
+use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -7,6 +10,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 #[derive(Debug)]
 struct Backend {
     client: Client,
+    conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
 }
 
@@ -20,8 +24,8 @@ impl LanguageServer for Backend {
                     TextDocumentSyncKind::INCREMENTAL,
                 )),
                 completion_provider: Some(CompletionOptions {
-                    resolve_provider: Some(false),
-                    trigger_characters: None,
+                    resolve_provider: Some(true),
+                    trigger_characters: Some(vec![]),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
@@ -31,9 +35,20 @@ impl LanguageServer for Backend {
     }
 
     async fn initialized(&self, _: InitializedParams) {
-        self.client
-            .log_message(MessageType::INFO, "ds-pinyin-lsp initialized!")
-            .await;
+        let conn = Connection::open(
+            "/Users/aioiyuuko/develop/pinyin-lsp/packages/dict-builder/dicts/dict.db3",
+        );
+        if let Ok(conn) = conn {
+            let mut mutex = self.conn.lock().await;
+            *mutex = Some(conn);
+            self.client
+                .log_message(MessageType::INFO, "ds-pinyin-lsp initialized!")
+                .await;
+        } else if let Err(err) = conn {
+            self.client
+                .show_message(MessageType::INFO, &format!("Open database error: {}", err))
+                .await;
+        }
     }
 
     async fn shutdown(&self) -> Result<()> {
@@ -74,10 +89,70 @@ impl LanguageServer for Backend {
             .await;
     }
 
-    async fn completion(&self, _: CompletionParams) -> Result<Option<CompletionResponse>> {
-        // let uri = params.text_document_position.text_document.uri;
-        // let position = params.text_document_position.position;
-        Ok(Some(vec![]).map(CompletionResponse::Array))
+    async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        let position = params.text_document_position.position;
+        let uri = params.text_document_position.text_document.uri.to_string();
+        let document = self.documents.get(&uri);
+        let pre_line = get_pre_line(&document, &position).unwrap_or("");
+
+        if pre_line.is_empty() {
+            return Ok(Some(vec![]).map(CompletionResponse::Array));
+        }
+
+        let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
+
+        if pinyin.is_empty() {
+            return Ok(Some(vec![]).map(CompletionResponse::Array));
+        }
+
+        self.client
+            .log_message(MessageType::INFO, &format!("pinyin: {}", &pinyin))
+            .await;
+
+        if let Some(ref conn) = *self.conn.lock().await {
+            // words match
+            if let Ok(suggest) = query_words(conn, &pinyin, pinyin.len() > 3) {
+                if suggest.len() > 0 {
+                    let res = suggest
+                        .into_iter()
+                        .map(|s| CompletionItem {
+                            label: s.hanzi,
+                            kind: Some(CompletionItemKind::TEXT),
+                            filter_text: Some(s.pinyin),
+                            ..Default::default()
+                        })
+                        .collect::<Vec<CompletionItem>>();
+                    return Ok(Some(CompletionResponse::List(CompletionList {
+                        is_incomplete: true,
+                        items: res,
+                    })));
+                }
+            }
+
+            // dict suggest
+            if let Ok(suggest) = query_dict(conn, &pinyin) {
+                if suggest.len() > 0 {
+                    let res = suggest
+                        .into_iter()
+                        .map(|s| CompletionItem {
+                            label: s.hanzi,
+                            kind: Some(CompletionItemKind::TEXT),
+                            filter_text: Some(s.pinyin),
+                            ..Default::default()
+                        })
+                        .collect::<Vec<CompletionItem>>();
+                    return Ok(Some(CompletionResponse::List(CompletionList {
+                        is_incomplete: true,
+                        items: res,
+                    })));
+                }
+            }
+        };
+
+        Ok(Some(CompletionResponse::List(CompletionList {
+            is_incomplete: false,
+            items: vec![],
+        })))
     }
 }
 
@@ -88,6 +163,7 @@ async fn main() {
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
+        conn: Mutex::new(None),
         documents: DashMap::new(),
     })
     .finish();
