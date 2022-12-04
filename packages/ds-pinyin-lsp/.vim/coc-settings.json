@@ -4,6 +4,7 @@
     "dashmap",
     "hanzi",
     "mapref",
+    "nihao",
     "ropey",
     "rusqlite",
     "substr"

@@ -94,3 +94,28 @@ pub fn get_pinyin<'a>(pre_line: &'a str) -> Option<String> {
     }
     None
 }
+
+#[cfg(test)]
+pub mod test_utils {
+    use rusqlite::Connection;
+
+    use crate::utils::query_words;
+
+    use super::get_pinyin;
+
+    #[test]
+    fn test_query_words() {
+        let conn = Connection::open("../dict-builder/dicts/dict.db3").expect("Open Connection");
+        if let Ok(suggest) = query_words(&conn, "ni", true) {
+            assert!(suggest.len() > 0);
+        }
+    }
+
+    #[test]
+    fn test_get_pinyin() {
+        assert_eq!(
+            get_pinyin("hello world nihao").expect("get pinyin nihao"),
+            "nihao"
+        );
+    }
+}

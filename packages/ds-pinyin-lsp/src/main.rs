@@ -1,7 +1,9 @@
 use dashmap::DashMap;
+use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{get_pinyin, get_pre_line, query_dict, query_words};
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use rusqlite::Connection;
+use serde_json::Value;
 use tokio::sync::Mutex;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -10,6 +12,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 #[derive(Debug)]
 struct Backend {
     client: Client,
+    setting: Mutex<Option<Setting>>,
     conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
 }
@@ -34,25 +37,69 @@ impl LanguageServer for Backend {
         })
     }
 
-    async fn initialized(&self, _: InitializedParams) {
-        let conn = Connection::open(
-            "/Users/aioiyuuko/develop/pinyin-lsp/packages/dict-builder/dicts/dict.db3",
-        );
-        if let Ok(conn) = conn {
-            let mut mutex = self.conn.lock().await;
-            *mutex = Some(conn);
-            self.client
-                .log_message(MessageType::INFO, "ds-pinyin-lsp initialized!")
-                .await;
-        } else if let Err(err) = conn {
-            self.client
-                .show_message(MessageType::INFO, &format!("Open database error: {}", err))
-                .await;
-        }
-    }
-
     async fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+
+    async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
+        let mut setting = self.setting.lock().await;
+
+        // TODO: update db_path
+        if let Some(_) = *setting {
+            return;
+        }
+
+        let db_path = &Value::String(String::new());
+
+        let db_path = params.settings.get("db_path").unwrap_or(&db_path);
+
+        // invalid db_path
+        if !db_path.is_string() {
+            return self
+                .client
+                .show_message(
+                    MessageType::ERROR,
+                    "ds-pinyin-lsp setting.db_path must be string!",
+                )
+                .await;
+        }
+
+        if let Some(db_path) = db_path.as_str() {
+            // db_path missing
+            if db_path.is_empty() {
+                return self
+                    .client
+                    .show_message(
+                        MessageType::ERROR,
+                        "ds-pinyin-lsp setting.db_path is missing or empty!",
+                    )
+                    .await;
+            }
+
+            // cache setting
+            *setting = Some(Setting {
+                db_path: db_path.to_string(),
+            });
+
+            // open db connection
+            let conn = Connection::open(db_path);
+            if let Ok(conn) = conn {
+                let mut mutex = self.conn.lock().await;
+                *mutex = Some(conn);
+                return self
+                    .client
+                    .log_message(
+                        MessageType::INFO,
+                        "ds-pinyin-lsp db connection initialized!",
+                    )
+                    .await;
+            } else if let Err(err) = conn {
+                return self
+                    .client
+                    .show_message(MessageType::ERROR, &format!("Open database error: {}", err))
+                    .await;
+            }
+        }
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
@@ -105,10 +152,6 @@ impl LanguageServer for Backend {
             return Ok(Some(vec![]).map(CompletionResponse::Array));
         }
 
-        self.client
-            .log_message(MessageType::INFO, &format!("pinyin: {}", &pinyin))
-            .await;
-
         if let Some(ref conn) = *self.conn.lock().await {
             // words match
             if let Ok(suggest) = query_words(conn, &pinyin, pinyin.len() > 3) {
@@ -149,10 +192,7 @@ impl LanguageServer for Backend {
             }
         };
 
-        Ok(Some(CompletionResponse::List(CompletionList {
-            is_incomplete: false,
-            items: vec![],
-        })))
+        Ok(Some(vec![]).map(CompletionResponse::Array))
     }
 }
 
@@ -163,6 +203,7 @@ async fn main() {
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
+        setting: Mutex::new(None),
         conn: Mutex::new(None),
         documents: DashMap::new(),
     })
