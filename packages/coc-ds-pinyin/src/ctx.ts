@@ -6,8 +6,8 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import which from 'which';
-import { dbName, dbTag, extensionName } from './constant';
-import { downloadServer, getLatestRelease, getPlatform } from './downloader';
+import { dbTag, extensionName } from './constant';
+import { downloadServer, getLatestRelease } from './downloader';
 
 export class Ctx {
   client!: LanguageClient;
@@ -98,7 +98,7 @@ export class Ctx {
       return;
     }
 
-    const latest = await getLatestRelease(type === 'db' ? dbName : getPlatform(), type === 'db' ? dbTag : undefined);
+    const latest = await getLatestRelease(type, type === 'db' ? dbTag : undefined);
     if (!latest) {
       return;
     }

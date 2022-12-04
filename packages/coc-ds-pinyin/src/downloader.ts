@@ -11,7 +11,7 @@ import * as zlib from 'zlib';
 import path from 'path';
 import stream from 'stream';
 import util from 'util';
-import { extensionName } from './constant';
+import { dbName, extensionName } from './constant';
 
 const pipeline = util.promisify(stream.pipeline);
 const agent = process.env.https_proxy ? new HttpsProxyAgent(process.env.https_proxy as string) : undefined;
@@ -92,7 +92,10 @@ export function getPlatform(): string | undefined {
   return platform;
 }
 
-export async function getLatestRelease(assetName?: string, releaseTag?: string): Promise<ReleaseTag | undefined> {
+export async function getLatestRelease(
+  type: 'db' | typeof extensionName = extensionName,
+  releaseTag?: string,
+): Promise<ReleaseTag | undefined> {
   const releaseURL = !releaseTag
     ? `https://api.github.com/repos/iamcco/${extensionName}/releases/latest`
     : `https://api.github.com/repos/iamcco/${extensionName}/releases/tags${releaseTag}`;
@@ -103,18 +106,21 @@ export async function getLatestRelease(assetName?: string, releaseTag?: string):
   }
 
   const release = (await response.json()) as GithubRelease;
-  if (!assetName) {
+  const platform = getPlatform();
+  if (type === extensionName && !platform) {
     console.error(`Unfortunately we don't ship binaries for your platform yet.`);
     return;
   }
-  const asset = release.assets.find((val) => val.browser_download_url.endsWith(`${assetName}.gz`));
+  const asset = release.assets.find((val) =>
+    val.browser_download_url.endsWith(`${type === 'db' ? dbName : platform}.gz`),
+  );
   if (!asset) {
     console.error(`getLatestRelease failed: ${release}`);
     return;
   }
 
   const tag = release.tag_name;
-  const name = process.platform === 'win32' ? `${extensionName}.exe` : extensionName;
+  const name = type === 'db' ? dbName : process.platform === 'win32' ? `${extensionName}.exe` : extensionName;
 
   return { asset, tag, url: asset.browser_download_url, name: name };
 }

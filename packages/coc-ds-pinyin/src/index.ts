@@ -3,7 +3,6 @@
  */
 import { ExtensionContext, window, workspace } from 'coc.nvim';
 import { existsSync, mkdirSync } from 'fs';
-import { platform } from 'os';
 import { join } from 'path';
 import { dbName, dbTag, extensionName } from './constant';
 import { Ctx } from './ctx';
@@ -35,7 +34,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     }
     if (ret === 0) {
       try {
-        const latest = await getLatestRelease(platform());
+        const latest = await getLatestRelease(extensionName);
         if (!latest) throw new Error('Failed to get latest release');
         await downloadServer(context, latest);
       } catch (e) {
@@ -56,7 +55,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }
       if (ret === 0) {
         try {
-          const latest = await getLatestRelease(dbName, dbTag);
+          const latest = await getLatestRelease('db', dbTag);
           if (!latest) throw new Error('Failed to get latest release');
           await downloadServer(context, latest, true);
         } catch (e) {
