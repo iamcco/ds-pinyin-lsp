@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ropey = "1.3.2"
+lsp-document = "0.6.0"
 tokio = { version = "1.17.0", features = ["full"] }
 tower-lsp = { version = "0.17.0"}
 dashmap = "5.1.0"

@@ -1,5 +1,5 @@
 use dashmap::DashMap;
-use ropey::Rope;
+use lsp_document::{apply_change, IndexedText, TextAdapter};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -7,7 +7,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 #[derive(Debug)]
 struct Backend {
     client: Client,
-    document_map: DashMap<String, Rope>,
+    documents: DashMap<String, IndexedText<String>>,
 }
 
 #[tower_lsp::async_trait]
@@ -21,11 +21,10 @@ impl LanguageServer for Backend {
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec![".".to_string()]),
+                    trigger_characters: None,
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
-                // definition: Some(GotoCapability::default()),
                 ..ServerCapabilities::default()
             },
         })
@@ -33,7 +32,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::INFO, "initialized!")
+            .log_message(MessageType::INFO, "ds-pinyin-lsp initialized!")
             .await;
     }
 
@@ -41,34 +40,37 @@ impl LanguageServer for Backend {
         Ok(())
     }
 
-    async fn did_change_configuration(&self, _: DidChangeConfigurationParams) {
-        self.client
-            .log_message(MessageType::INFO, "configuration changed!")
-            .await;
-    }
-
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
-        self.client
-            .log_message(MessageType::INFO, "file opened!")
-            .await;
-        self.on_change(TextDocumentItem {
-            uri: params.text_document.uri,
-            text: params.text_document.text,
-        })
-        .await
+        self.documents.insert(
+            params.text_document.uri.to_string(),
+            IndexedText::new(params.text_document.text),
+        );
     }
 
-    async fn did_change(&self, mut params: DidChangeTextDocumentParams) {
-        self.on_change(TextDocumentItem {
-            uri: params.text_document.uri,
-            text: std::mem::take(&mut params.content_changes[0].text),
-        })
-        .await
+    async fn did_change(&self, params: DidChangeTextDocumentParams) {
+        let mut document = self
+            .documents
+            .entry(params.text_document.uri.to_string())
+            .or_insert(IndexedText::new(String::new()));
+
+        let mut content: String;
+
+        for change in params.content_changes {
+            if let Some(change) = document.lsp_change_to_change(change) {
+                content = apply_change(&document, change);
+                *document = IndexedText::new(content);
+            }
+        }
     }
 
-    async fn did_close(&self, _: DidCloseTextDocumentParams) {
+    async fn did_close(&self, params: DidCloseTextDocumentParams) {
+        let uri = params.text_document.uri.to_string();
+
+        // remove close document
+        self.documents.remove(&uri);
+
         self.client
-            .log_message(MessageType::INFO, "file closed!")
+            .log_message(MessageType::INFO, &format!("Close file: {}", &uri))
             .await;
     }
 
@@ -79,19 +81,6 @@ impl LanguageServer for Backend {
     }
 }
 
-struct TextDocumentItem {
-    uri: Url,
-    text: String,
-}
-
-impl Backend {
-    async fn on_change(&self, params: TextDocumentItem) {
-        let rope = ropey::Rope::from_str(&params.text);
-        self.document_map
-            .insert(params.uri.to_string(), rope.clone());
-    }
-}
-
 #[tokio::main]
 async fn main() {
     let stdin = tokio::io::stdin();
@@ -99,8 +88,9 @@ async fn main() {
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
-        document_map: DashMap::new(),
+        documents: DashMap::new(),
     })
     .finish();
+
     Server::new(stdin, stdout, socket).serve(service).await;
 }
