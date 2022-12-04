@@ -1,0 +1,85 @@
+{
+  "name": "coc-ds-pinyin-lsp",
+  "version": "0.0.1",
+  "description": "pinyin input support for (Neo)vim",
+  "author": "iamcco <ooiss@qq.com>",
+  "license": "MIT",
+  "main": "out/index.js",
+  "keywords": [
+    "coc.nvim",
+    "pinyin",
+    "lsp"
+  ],
+  "engines": {
+    "coc": "^0.0.82"
+  },
+  "scripts": {
+    "clean": "rimraf ./out",
+    "watch": "cross-env NODE_ENV=development node esbuild.js --watch",
+    "build": "cross-env NODE_ENV=production node esbuild.js",
+    "lint": "eslint src",
+    "lint-fix": "eslint --fix src",
+    "prepare": "npm run clean && npm run build"
+  },
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "ds-pinyin-lsp configuration",
+      "properties": {
+        "ds-pinyin-lsp.trace.server": {
+          "type": "string",
+          "default": "off",
+          "enum": [
+            "off",
+            "message",
+            "verbose"
+          ],
+          "description": "Trace level of log"
+        },
+        "ds-pinyin-lsp.db-path": {
+          "type": "string",
+          "default": "",
+          "description": "db path"
+        },
+        "ds-pinyin-lsp.server-path": {
+          "type": "string",
+          "default": "",
+          "description": "Path to ds-pinyin-lsp command"
+        },
+        "ds-pinyin-lsp.checkOnStartup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Check ds-pinyin-lsp release on start up"
+        },
+        "ds-pinyin-lsp.prompt": {
+          "type": "boolean",
+          "default": true,
+          "description": "Allow prompt?"
+        },
+        "ds-pinyin-lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable coc-ds-pinyin-lsp extension"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^10.12.0",
+    "@typescript-eslint/eslint-plugin": "^4.16.1",
+    "@typescript-eslint/parser": "^4.16.1",
+    "coc.nvim": "^0.0.82",
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.9.0",
+    "eslint": "^7.21.0",
+    "eslint-config-prettier": "^8.1.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "prettier": "^2.2.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.2.2",
+    "vscode-languageserver-protocol": "^3.16.0",
+    "https-proxy-agent": "^5.0.1",
+    "node-fetch": "^2.6.0",
+    "which": "^3.0.0"
+  }
+}
