@@ -11,6 +11,7 @@ import * as zlib from 'zlib';
 import path from 'path';
 import stream from 'stream';
 import util from 'util';
+import { extensionName } from './constant';
 
 const pipeline = util.promisify(stream.pipeline);
 const agent = process.env.https_proxy ? new HttpsProxyAgent(process.env.https_proxy as string) : undefined;
@@ -19,7 +20,7 @@ async function patchelf(dest: PathLike): Promise<void> {
   const expression = `
 {src, pkgs ? import <nixpkgs> {}}:
     pkgs.stdenv.mkDerivation {
-        name = "ds-pinyin-lsp";
+        name = "${extensionName}";
         inherit src;
         phases = [ "installPhase" "fixupPhase" ];
         installPhase = "cp $src $out";
@@ -92,7 +93,7 @@ function getPlatform(): string | undefined {
 }
 
 export async function getLatestRelease(): Promise<ReleaseTag | undefined> {
-  const releaseURL = 'https://api.github.com/repos/iamcco/ds-pinyin-lsp/releases/latest';
+  const releaseURL = `https://api.github.com/repos/iamcco/${extensionName}/releases/latest`;
   const response = await fetch(releaseURL, { agent });
   if (!response.ok) {
     console.error(await response.text());
@@ -112,14 +113,14 @@ export async function getLatestRelease(): Promise<ReleaseTag | undefined> {
   }
 
   const tag = release.tag_name;
-  const name = process.platform === 'win32' ? 'ds-pinyin-lsp.exe' : 'ds-pinyin-lsp';
+  const name = process.platform === 'win32' ? `${extensionName}.exe` : extensionName;
 
   return { asset, tag, url: asset.browser_download_url, name: name };
 }
 
 export async function downloadServer(context: ExtensionContext, release: ReleaseTag): Promise<void> {
   const statusItem = window.createStatusBarItem(0, { progress: true });
-  statusItem.text = `Downloading ds-pinyin-lsp ${release.tag}`;
+  statusItem.text = `Downloading ${extensionName} ${release.tag}`;
   statusItem.show();
 
   const resp = await fetch(release.url, { agent });
@@ -135,7 +136,7 @@ export async function downloadServer(context: ExtensionContext, release: Release
   resp.body.on('data', (chunk: Buffer) => {
     cur += chunk.length;
     const p = ((cur / len) * 100).toFixed(2);
-    statusItem.text = `${p}% Downloading ds-pinyin-lsp ${release.tag}`;
+    statusItem.text = `${p}% Downloading ${extensionName} ${release.tag}`;
   });
 
   const _path = path.join(context.storagePath, release.name); // lgtm[js/shell-command-constructed-from-input]
@@ -159,7 +160,7 @@ export async function downloadServer(context: ExtensionContext, release: Release
 
   try {
     if (await fs.stat('/etc/nixos')) {
-      statusItem.text = `Patching ds-pinyin-lsp executable...`;
+      statusItem.text = `Patching ${extensionName} executable...`;
       await patchelf(_path);
     }
   } catch (e) {}

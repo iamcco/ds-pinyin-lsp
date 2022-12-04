@@ -1,10 +1,11 @@
 import { ExtensionContext, window, workspace } from 'coc.nvim';
 import { existsSync, mkdirSync } from 'fs';
+import { extensionName } from './constant';
 import { Ctx } from './ctx';
 import { downloadServer, getLatestRelease } from './downloader';
 
 export async function activate(context: ExtensionContext): Promise<void> {
-  const config = workspace.getConfiguration('ds-pinyin-lsp');
+  const config = workspace.getConfiguration(extensionName);
   const isEnabled = config.get<boolean>('enabled', true);
 
   // if not enabled then return
@@ -22,7 +23,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const bin = ctx.resolveBin();
 
   if (!bin) {
-    let msg = 'ds-pinyin-lsp is not found, download from GitHub release?';
+    let msg = `${extensionName} is not found, download from GitHub release?`;
     let ret = -1;
     if (config.get('prompt', true)) {
       ret = await window.showQuickpick(['Yes', 'Cancel'], msg);
@@ -34,7 +35,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         await downloadServer(context, latest);
       } catch (e) {
         console.error(e);
-        msg = 'Download ds-pinyin-lsp failed, you can get it from https://github.com/iamcco/ds-pinyin-lsp';
+        msg = `Download ${extensionName} failed, you can get it from https://github.com/iamcco/${extensionName}`;
         window.showErrorMessage(msg);
         return;
       }

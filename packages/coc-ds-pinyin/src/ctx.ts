@@ -6,16 +6,19 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import which from 'which';
+import { extensionName } from './constant';
 import { downloadServer, getLatestRelease } from './downloader';
 
 export class Ctx {
   client!: LanguageClient;
 
   constructor(private readonly extCtx: ExtensionContext) {
-    const statusBar = window.createStatusBarItem(0);
-    statusBar.text = 'pinyin';
-    statusBar.show();
-    this.extCtx.subscriptions.push(statusBar);
+    if (workspace.getConfiguration(extensionName).get('show-status-bar')) {
+      const statusBar = window.createStatusBarItem(0);
+      statusBar.text = 'Pinyin';
+      statusBar.show();
+      this.extCtx.subscriptions.push(statusBar);
+    }
   }
 
   async startServer() {
@@ -25,15 +28,15 @@ export class Ctx {
     }
 
     const client = new LanguageClient(
-      'ds-pinyin-lsp',
-      'ds-pinyin-lsp server',
+      extensionName,
+      `${extensionName} server`,
       {
         command: bin,
       },
       {
         documentSelector: ['*'],
         initializationOptions: {
-          'db-path': workspace.getConfiguration('ds-pinyin-lsp').get('db-path', ''),
+          'db-path': workspace.getConfiguration(extensionName).get('db-path', ''),
         },
       },
     );
@@ -64,9 +67,9 @@ export class Ctx {
   resolveBin(): string | undefined {
     // 1. from config, custom server path
     // 2. bundled
-    let bin = join(this.extCtx.storagePath, process.platform === 'win32' ? 'ds-pinyin-lsp.exe' : 'ds-pinyin-lsp');
+    let bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
     if (!existsSync(bin)) {
-      bin = workspace.getConfiguration('ds-pinyin-lsp').get<string>('server-path', '');
+      bin = workspace.getConfiguration(extensionName).get<string>('server-path', '');
 
       if (bin) {
         if (bin?.startsWith('~/')) {
@@ -85,7 +88,7 @@ export class Ctx {
   }
 
   async checkUpdate(auto = true) {
-    const config = workspace.getConfiguration('ds-pinyin-lsp');
+    const config = workspace.getConfiguration(extensionName);
     if (config.get('server-path')) {
       // no update checking if using custom server
       return;
@@ -103,16 +106,16 @@ export class Ctx {
     const old = this.extCtx.globalState.get('release') || 'unknown release';
     if (old === latest.tag) {
       if (!auto) {
-        window.showInformationMessage(`Your ds-pinyin-lsp release is updated`);
+        window.showInformationMessage(`Your ${extensionName} release is updated`);
       }
       return;
     }
 
-    const msg = `ds-pinyin-lsp has a new release: ${latest.tag}, you're using ${old}. Would you like to download from GitHub`;
+    const msg = `${extensionName} has a new release: ${latest.tag}, you're using ${old}. Would you like to download from GitHub`;
     let ret = 0;
     if (config.get('prompt', true)) {
       ret = await window.showQuickpick(
-        ['Yes, download the latest ds-pinyin-lsp', 'Check GitHub releases', 'Cancel'],
+        ['Yes, download the latest ${extensionName}', 'Check GitHub releases', 'Cancel'],
         msg,
       );
     }
@@ -124,11 +127,10 @@ export class Ctx {
         await downloadServer(this.extCtx, latest);
       } catch (e) {
         console.error(e);
-        let msg = 'Upgrade ds-pinyin-lsp failed, please try again';
+        let msg = `Upgrade ${extensionName} failed, please try again`;
         const err = e as any;
         if (err.code === 'EBUSY' || err.code === 'ETXTBSY' || err.code === 'EPERM') {
-          msg =
-            'Upgrade ds-pinyin-lsp failed, other Vim instances might be using it, you should close them and try again';
+          msg = `Upgrade ${extensionName} failed, other Vim instances might be using it, you should close them and try again`;
         }
         window.showInformationMessage(msg, 'error');
         return;
@@ -138,7 +140,7 @@ export class Ctx {
 
       this.extCtx.globalState.update('release', latest.tag);
     } else if (ret === 1) {
-      await commands.executeCommand('vscode.open', 'https://github.com/iamcco/ds-pinyin-lsp/releases').catch(() => {
+      await commands.executeCommand('vscode.open', `https://github.com/iamcco/${extensionName}/releases`).catch(() => {
         //
       });
     }

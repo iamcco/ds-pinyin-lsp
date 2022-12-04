@@ -36,6 +36,11 @@
           ],
           "description": "Trace level of log"
         },
+        "ds-pinyin-lsp.show-status-bar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Pinyin in status bar"
+        },
         "ds-pinyin-lsp.db-path": {
           "type": "string",
           "default": "",
