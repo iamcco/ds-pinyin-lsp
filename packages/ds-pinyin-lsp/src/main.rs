@@ -19,7 +19,9 @@ struct Backend {
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
-    async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+    async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
+        self.init(&params.initialization_options).await;
+
         Ok(InitializeResult {
             server_info: None,
             capabilities: ServerCapabilities {
@@ -39,67 +41,6 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
-    }
-
-    async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
-        let mut setting = self.setting.lock().await;
-
-        // TODO: update db_path
-        if let Some(_) = *setting {
-            return;
-        }
-
-        let db_path = &Value::String(String::new());
-
-        let db_path = params.settings.get("db_path").unwrap_or(&db_path);
-
-        // invalid db_path
-        if !db_path.is_string() {
-            return self
-                .client
-                .show_message(
-                    MessageType::ERROR,
-                    "ds-pinyin-lsp setting.db_path must be string!",
-                )
-                .await;
-        }
-
-        if let Some(db_path) = db_path.as_str() {
-            // db_path missing
-            if db_path.is_empty() {
-                return self
-                    .client
-                    .show_message(
-                        MessageType::ERROR,
-                        "ds-pinyin-lsp setting.db_path is missing or empty!",
-                    )
-                    .await;
-            }
-
-            // cache setting
-            *setting = Some(Setting {
-                db_path: db_path.to_string(),
-            });
-
-            // open db connection
-            let conn = Connection::open(db_path);
-            if let Ok(conn) = conn {
-                let mut mutex = self.conn.lock().await;
-                *mutex = Some(conn);
-                return self
-                    .client
-                    .log_message(
-                        MessageType::INFO,
-                        "ds-pinyin-lsp db connection initialized!",
-                    )
-                    .await;
-            } else if let Err(err) = conn {
-                return self
-                    .client
-                    .show_message(MessageType::ERROR, &format!("Open database error: {}", err))
-                    .await;
-            }
-        }
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
@@ -193,6 +134,71 @@ impl LanguageServer for Backend {
         };
 
         Ok(Some(vec![]).map(CompletionResponse::Array))
+    }
+}
+
+impl Backend {
+    async fn init(&self, initialization_options: &Option<Value>) {
+        if let Some(params) = initialization_options {
+            let mut setting = self.setting.lock().await;
+
+            let db_path = &Value::String(String::new());
+
+            let db_path = params.get("db-path").unwrap_or(&db_path);
+
+            // invalid db_path
+            if !db_path.is_string() {
+                return self
+                    .client
+                    .show_message(MessageType::ERROR, "ds-pinyin-lsp db-path must be string!")
+                    .await;
+            }
+
+            if let Some(db_path) = db_path.as_str() {
+                // db_path missing
+                if db_path.is_empty() {
+                    return self
+                        .client
+                        .show_message(
+                            MessageType::ERROR,
+                            "ds-pinyin-lsp db-path is missing or empty!",
+                        )
+                        .await;
+                }
+
+                // cache setting
+                *setting = Some(Setting {
+                    db_path: db_path.to_string(),
+                });
+
+                // open db connection
+                let conn = Connection::open(db_path);
+                if let Ok(conn) = conn {
+                    let mut mutex = self.conn.lock().await;
+                    *mutex = Some(conn);
+                    return self
+                        .client
+                        .log_message(
+                            MessageType::INFO,
+                            "ds-pinyin-lsp db connection initialized!",
+                        )
+                        .await;
+                } else if let Err(err) = conn {
+                    return self
+                        .client
+                        .show_message(MessageType::ERROR, &format!("Open database error: {}", err))
+                        .await;
+                }
+            }
+        } else {
+            return self
+                .client
+                .show_message(
+                    MessageType::ERROR,
+                    "ds-pinyin-lsp initialization_options is missing, it must include db-path setting!",
+                )
+                .await;
+        }
     }
 }
 
