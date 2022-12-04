@@ -8,6 +8,7 @@
     "nixos",
     "nothrow",
     "nvim",
-    "patchelf"
+    "patchelf",
+    "quanpin"
   ]
 }

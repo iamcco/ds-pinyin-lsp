@@ -1,6 +1,18 @@
 # Dead Simple Pinyin Language Server
 
-> Dead simple pinyin language server implement for input Chinese with no IME enable
+![](https://user-images.githubusercontent.com/5492542/205504265-0875046a-aab4-4672-9467-048cd43460a9.png)
+
+## Introduction
+
+Dead simple Pinyin language server for input Chinese without IME. (Main for (neo)vim environment)
+
+> Current only support **全拼(Quanpin)**
+
+### Packages
+
+- [dict-builder](./packages/dict-builder) script to build `dict.db3`
+- [ds-pinyin-lsp](./packages/ds-pinyin-lsp) the pinyin language server
+- [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin) extension for coc.nvim
 
 ## LSP client setting
 
@@ -20,7 +32,7 @@
 
 ## Dict data
 
-- [rime-ice](https://github.com/iDvel/rime-ice)
+All dict data from [rime-ice](https://github.com/iDvel/rime-ice)
 
 ### Buy Me A Coffee ☕️
 
