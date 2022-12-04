@@ -2,48 +2,56 @@ use std::error::Error;
 
 use rusqlite::Connection;
 
-pub fn create_dict_table(conn: &Connection) -> Result<(), Box<dyn Error>> {
-    conn.execute(
-        "CREATE TABLE dict (
-            id INTEGER PRIMARY KEY,
-            pinyin TEXT NOT NULL,
-            hanzi TEXT NOT NULL,
-            priority INTEGER
-        )",
-        (),
-    )?;
+pub fn create_dict_table(conn: &Connection, tables: &[&str]) -> Result<(), Box<dyn Error>> {
+    for table in tables {
+        conn.execute(
+            &format!(
+                "CREATE TABLE {} (
+                    id INTEGER PRIMARY KEY,
+                    pinyin TEXT NOT NULL,
+                    hanzi TEXT NOT NULL,
+                    priority INTEGER
+                )",
+                table
+            ),
+            (),
+        )?;
+    }
 
     Ok(())
 }
 
-pub fn create_dict_index(conn: &Connection) -> Result<(), Box<dyn Error>> {
-    conn.execute(
-        "CREATE INDEX dict_index ON dict (
-            pinyin
-        )",
-        (),
-    )?;
+pub fn create_dict_index(conn: &Connection, tables: &[&str]) -> Result<(), Box<dyn Error>> {
+    for table in tables {
+        conn.execute(
+            &format!("CREATE INDEX {}_index ON {}(pinyin)", table, table),
+            (),
+        )?;
+    }
 
     Ok(())
 }
 
 pub fn batch_insert_records(
     conn: &Connection,
-    dicts: &[Vec<(String, String, u32)>],
+    dicts: &[(&str, Vec<(String, String, u32)>)],
 ) -> Result<(), Box<dyn Error>> {
     // begin transaction
     conn.execute("BEGIN TRANSACTION", ())?;
 
     // insert records
-    for dict in dicts {
+    for (table, dict) in dicts {
         for (pinyin, hanzi, priority) in dict {
             if let Err(err) = conn.execute(
-                "INSERT INTO dict (pinyin, hanzi, priority) VALUES (?1, ?2, ?3)",
+                &format!(
+                    "INSERT INTO {} (pinyin, hanzi, priority) VALUES (?1, ?2, ?3)",
+                    table
+                ),
                 (pinyin, hanzi, priority),
             ) {
                 println!(
-                    "Insert record [{}, {}, {}] error: {:?}",
-                    pinyin, hanzi, priority, err
+                    "Insert record [{}, {}, {}] for {} error: {:?}",
+                    pinyin, hanzi, priority, table, err
                 );
             }
         }

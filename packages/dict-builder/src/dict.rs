@@ -15,9 +15,7 @@ pub fn get_pinyin_from_hanzi(hanzi: &str) -> String {
         .join("")
 }
 
-pub fn get_format_dict(
-    dict_path: &str,
-) -> Result<Vec<(String, String, u32)>, Box<dyn error::Error>> {
+pub fn format_dict(dict_path: &str) -> Result<Vec<(String, String, u32)>, Box<dyn error::Error>> {
     let mut is_valid_line = false;
 
     let res = read_to_string(dict_path)?
@@ -36,10 +34,24 @@ pub fn get_format_dict(
                 return (String::new(), String::new(), 0);
             }
 
+            // split by whitespace
             let mut sep = line.split_whitespace();
             // hanzi at rist column
             let hanzi = sep.next().unwrap_or("");
+
+            // invalid hanzi
+            if hanzi.eq("") {
+                return (String::new(), String::new(), 0);
+            }
+
+            // the pinyin of hanzi
             let pinyin = get_pinyin_from_hanzi(hanzi);
+
+            // invalid pinyin
+            if pinyin.eq("") {
+                return (String::new(), String::new(), 0);
+            }
+
             // priority at last column and maybe missing
             let priority = sep.last().unwrap_or("").parse::<u32>().unwrap_or(1);
 
