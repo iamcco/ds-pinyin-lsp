@@ -4,7 +4,9 @@ use dashmap::mapref::one::Ref;
 use lsp_document::{IndexedText, TextAdapter, TextMap};
 use regex::Regex;
 use rusqlite::Connection;
-use tower_lsp::lsp_types::{Position, Range};
+use tower_lsp::lsp_types::{
+    CompletionItem, CompletionItemKind, CompletionTextEdit, Position, Range, TextEdit,
+};
 
 use crate::types::Suggest;
 
@@ -37,12 +39,12 @@ pub fn query_words(
 ) -> Result<Vec<Suggest>, Box<dyn Error>> {
     let stmt = if eq {
         format!(
-            "SELECT pinyin, hanzi, priority FROM words WHERE pinyin = '{}'",
+            "SELECT pinyin, hanzi, priority FROM words WHERE pinyin = '{}' ORDER BY priority DESC",
             pinyin
         )
     } else {
         format!(
-            "SELECT pinyin, hanzi, priority FROM words WHERE pinyin BETWEEN '{}' AND '{}{{' limit 50",
+            "SELECT pinyin, hanzi, priority FROM words WHERE pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit 50",
             pinyin, pinyin
         )
     };
@@ -65,7 +67,7 @@ pub fn query_words(
 
 pub fn query_dict(conn: &Connection, pinyin: &str) -> Result<Vec<Suggest>, Box<dyn Error>> {
     let mut stmt = conn.prepare(&format!(
-        "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin BETWEEN '{}' AND '{}{{' limit 50",
+        "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit 50",
         pinyin, pinyin
     ))?;
 
@@ -93,6 +95,24 @@ pub fn get_pinyin<'a>(pre_line: &'a str) -> Option<String> {
         return Some(m["pinyin"].to_string());
     }
     None
+}
+
+pub fn suggest_to_completion_item(suggest: Vec<Suggest>, range: Range) -> Vec<CompletionItem> {
+    suggest
+        .into_iter()
+        .map(|s| CompletionItem {
+            label: s.hanzi.to_string(),
+            kind: Some(CompletionItemKind::TEXT),
+            filter_text: Some(s.pinyin),
+            // use text_edit here to avoid client's replace mode
+            // it's no need to replace words behind cursor
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit::new(
+                range.clone(),
+                s.hanzi,
+            ))),
+            ..Default::default()
+        })
+        .collect::<Vec<CompletionItem>>()
 }
 
 #[cfg(test)]

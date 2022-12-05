@@ -1,6 +1,8 @@
 use dashmap::DashMap;
 use ds_pinyin_lsp::types::Setting;
-use ds_pinyin_lsp::utils::{get_pinyin, get_pre_line, query_dict, query_words};
+use ds_pinyin_lsp::utils::{
+    get_pinyin, get_pre_line, query_dict, query_words, suggest_to_completion_item,
+};
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use rusqlite::Connection;
 use serde_json::Value;
@@ -84,56 +86,56 @@ impl LanguageServer for Backend {
         let pre_line = get_pre_line(&document, &position).unwrap_or("");
 
         if pre_line.is_empty() {
-            return Ok(Some(vec![]).map(CompletionResponse::Array));
+            return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
         let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
 
         if pinyin.is_empty() {
-            return Ok(Some(vec![]).map(CompletionResponse::Array));
+            return Ok(Some(CompletionResponse::Array(vec![])));
         }
+
+        let range = Range::new(
+            Position {
+                line: position.line,
+                character: position.character - pinyin.len() as u32,
+            },
+            position,
+        );
 
         if let Some(ref conn) = *self.conn.lock().await {
             // words match
-            if let Ok(suggest) = query_words(conn, &pinyin, pinyin.len() > 3) {
+            if let Ok(suggest) = query_words(conn, &pinyin, true) {
                 if suggest.len() > 0 {
-                    let res = suggest
-                        .into_iter()
-                        .map(|s| CompletionItem {
-                            label: s.hanzi,
-                            kind: Some(CompletionItemKind::TEXT),
-                            filter_text: Some(s.pinyin),
-                            ..Default::default()
-                        })
-                        .collect::<Vec<CompletionItem>>();
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: res,
+                        items: suggest_to_completion_item(suggest, range),
                     })));
                 }
             }
 
-            // dict suggest
-            if let Ok(suggest) = query_dict(conn, &pinyin) {
+            // words search
+            if let Ok(suggest) = query_words(conn, &pinyin, false) {
                 if suggest.len() > 0 {
-                    let res = suggest
-                        .into_iter()
-                        .map(|s| CompletionItem {
-                            label: s.hanzi,
-                            kind: Some(CompletionItemKind::TEXT),
-                            filter_text: Some(s.pinyin),
-                            ..Default::default()
-                        })
-                        .collect::<Vec<CompletionItem>>();
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: res,
+                        items: suggest_to_completion_item(suggest, range),
+                    })));
+                }
+            }
+
+            // dict search
+            if let Ok(suggest) = query_dict(conn, &pinyin) {
+                if suggest.len() > 0 {
+                    return Ok(Some(CompletionResponse::List(CompletionList {
+                        is_incomplete: true,
+                        items: suggest_to_completion_item(suggest, range),
                     })));
                 }
             }
         };
 
-        Ok(Some(vec![]).map(CompletionResponse::Array))
+        Ok(Some(CompletionResponse::Array(vec![])))
     }
 }
 

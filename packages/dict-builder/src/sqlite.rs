@@ -24,7 +24,10 @@ pub fn create_dict_table(conn: &Connection, tables: &[&str]) -> Result<(), Box<d
 pub fn create_dict_index(conn: &Connection, tables: &[&str]) -> Result<(), Box<dyn Error>> {
     for table in tables {
         conn.execute(
-            &format!("CREATE INDEX {}_index ON {}(pinyin)", table, table),
+            &format!(
+                "CREATE INDEX {}_index ON {}(pinyin, priority)",
+                table, table
+            ),
             (),
         )?;
     }
