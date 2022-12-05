@@ -41,6 +41,11 @@
           "default": true,
           "description": "Show Pinyin in status bar"
         },
+        "ds-pinyin-lsp.status-bar-flag": {
+          "type": "string",
+          "default": "Pinyin",
+          "description": "Flat show in status bar"
+        },
         "ds-pinyin-lsp.db-path": {
           "type": "string",
           "default": "",

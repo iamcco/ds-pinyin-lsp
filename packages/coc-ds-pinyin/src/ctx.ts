@@ -15,7 +15,7 @@ export class Ctx {
   constructor(private readonly extCtx: ExtensionContext) {
     if (workspace.getConfiguration(extensionName).get('show-status-bar')) {
       const statusBar = window.createStatusBarItem(0);
-      statusBar.text = 'Pinyin';
+      statusBar.text = workspace.getConfiguration(extensionName).get('status-bar-flag', 'Pinyin');
       statusBar.show();
       this.extCtx.subscriptions.push(statusBar);
     }
