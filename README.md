@@ -2,6 +2,20 @@
 
 ![](https://user-images.githubusercontent.com/5492542/205504265-0875046a-aab4-4672-9467-048cd43460a9.png)
 
+## TODO
+
+- feature
+  - 开关控制是否补全
+  - 状态栏符号设置
+- Suggest
+  - 中文前缀
+  - 长句分段匹配
+    > 从后面开始减少拼音匹配
+  - emoji
+  - 中文标点符号
+  - 偏旁
+  - 多音字
+
 ## Introduction
 
 Dead simple Pinyin language server for input Chinese without IME. (Main for (neo)vim environment)
