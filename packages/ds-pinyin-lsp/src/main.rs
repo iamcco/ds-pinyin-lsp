@@ -161,10 +161,7 @@ impl Backend {
                 if db_path.is_empty() {
                     return self
                         .client
-                        .show_message(
-                            MessageType::ERROR,
-                            "ds-pinyin-lsp db-path is missing or empty!",
-                        )
+                        .show_message(MessageType::ERROR, "ds-pinyin-lsp db-path is empty string!")
                         .await;
                 }
 

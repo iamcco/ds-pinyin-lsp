@@ -1,6 +1,8 @@
-# Dead Simple Pinyin Language Server
+# 超，超简单的拼音输入法
 
 ![](https://user-images.githubusercontent.com/5492542/205504265-0875046a-aab4-4672-9467-048cd43460a9.png)
+
+中文 [English](./README-En.md)
 
 ## TODO
 
@@ -16,39 +18,51 @@
   - [ ] 偏旁
   - [ ] 多音字
 
-## Introduction
+## 介绍
 
-Dead simple Pinyin language server for input Chinese without IME. (Main for (neo)vim environment)
+通过 LSP 实现的超简单拼音输入法，其主要的用途是在 (neo)vim 编辑器中不需要切换输入法也能输入中文。
+避免忘记切换输入法而导致在 Normal 模式下弹出输入法的蛋疼问题。
 
-> Current only support **全拼(Quanpin)**
+**注意**
 
-### Packages
+- 当前只支持**全拼**
+- 需要配合 LSP 客户端使用，比如 coc.nvim / VS Code 等。
 
-- [dict-builder](./packages/dict-builder) script to build `dict.db3`
-- [ds-pinyin-lsp](./packages/ds-pinyin-lsp) the pinyin language server
-- [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin) extension for coc.nvim
+## 配合 coc.nvim 使用
 
-## LSP client setting
+在 `coc-settings.json` 中添加 `"suggest.asciiCharactersOnly": true,` 配置
 
-### coc.nvim
+使用扩展
+
+```
+:CocInstall coc-ds-pinyin-lsp
+```
+
+或者可以添加以下配置到 `coc-settings.json`
 
 ``` jsonc
   "languageserver": {
     "ds-pinyin": {
       "command": "path to ds-pinyin-lsp command",
       "filetypes": ["*"],
-      "settings": {
-        "db_path": "path to dict.db3"
+      "initializationOptions": {
+        "db-path": "path to dict.db3"
       }
     }
   }
 ```
 
-## Dict data
+## Packages
 
-All dict data from [rime-ice](https://github.com/iDvel/rime-ice)
+- [dict-builder](./packages/dict-builder) 用来构建 `dict.db3`
+- [ds-pinyin-lsp](./packages/ds-pinyin-lsp) lsp 实现
+- [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin) coc.nvim 扩展
 
-### Buy Me A Coffee ☕️
+## 关于使用的字典
+
+所使用的字典来自 [rime-ice](https://github.com/iDvel/rime-ice) 项目
+
+### 请我吃个煎饼馃子 🤟
 
 ![btc](https://img.shields.io/keybase/btc/iamcco.svg?style=popout-square)
 
