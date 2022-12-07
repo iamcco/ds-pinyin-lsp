@@ -1,10 +1,12 @@
 {
   "cSpell.words": [
     "chumsky",
+    "concat",
     "dashmap",
     "hanzi",
     "mapref",
     "nihao",
+    "nihaonishishui",
     "ropey",
     "rusqlite",
     "substr"

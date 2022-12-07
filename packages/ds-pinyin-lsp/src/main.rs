@@ -1,7 +1,8 @@
 use dashmap::DashMap;
 use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{
-    get_pinyin, get_pre_line, query_dict, query_words, suggest_to_completion_item,
+    get_pinyin, get_pre_line, long_suggest_to_completion_item, query_dict, query_long_sentence,
+    query_words, suggest_to_completion_item,
 };
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use rusqlite::Connection;
@@ -130,6 +131,16 @@ impl LanguageServer for Backend {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
                         items: suggest_to_completion_item(suggest, range),
+                    })));
+                }
+            }
+
+            // long statement
+            if let Ok(Some(suggest)) = query_long_sentence(conn, &pinyin) {
+                if suggest.len() > 0 {
+                    return Ok(Some(CompletionResponse::List(CompletionList {
+                        is_incomplete: true,
+                        items: long_suggest_to_completion_item(suggest, range),
                     })));
                 }
             }
