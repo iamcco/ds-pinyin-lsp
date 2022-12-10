@@ -1,5 +1,5 @@
 use dashmap::DashMap;
-use ds_pinyin_lsp::sqlite::{query_dict, query_words};
+use ds_pinyin_lsp::sqlite::query_dict;
 use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{
     get_pinyin, get_pre_line, long_suggests_to_completion_item, query_long_sentence,
@@ -106,26 +106,6 @@ impl LanguageServer for Backend {
         );
 
         if let Some(ref conn) = *self.conn.lock().await {
-            // words match
-            if let Ok(suggests) = query_words(conn, &pinyin, true) {
-                if suggests.len() > 0 {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: suggests_to_completion_item(suggests, range),
-                    })));
-                }
-            }
-
-            // words search
-            if let Ok(suggests) = query_words(conn, &pinyin, false) {
-                if suggests.len() > 0 {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: suggests_to_completion_item(suggests, range),
-                    })));
-                }
-            }
-
             // dict search
             if let Ok(suggests) = query_dict(conn, &pinyin) {
                 if suggests.len() > 0 {
