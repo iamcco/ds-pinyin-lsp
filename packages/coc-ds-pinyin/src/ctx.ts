@@ -13,9 +13,9 @@ export class Ctx {
   client!: LanguageClient;
 
   constructor(private readonly extCtx: ExtensionContext) {
-    if (workspace.getConfiguration(extensionName).get('show-status-bar')) {
+    if (workspace.getConfiguration(extensionName).get('show_status_bar')) {
       const statusBar = window.createStatusBarItem(0);
-      statusBar.text = workspace.getConfiguration(extensionName).get('status-bar-flag', 'Pinyin');
+      statusBar.text = workspace.getConfiguration(extensionName).get('status_bar_flag', 'Pinyin');
       statusBar.show();
       this.extCtx.subscriptions.push(statusBar);
     }
@@ -91,7 +91,7 @@ export class Ctx {
     // 2. bundled
     let bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
     if (!existsSync(bin)) {
-      bin = workspace.getConfiguration(extensionName).get<string>('server-path', '');
+      bin = workspace.getConfiguration(extensionName).get<string>('server_path', '');
 
       if (bin) {
         if (bin?.startsWith('~/')) {
@@ -111,12 +111,12 @@ export class Ctx {
 
   async checkUpdate(type: 'db' | typeof extensionName = extensionName, auto = true) {
     const config = workspace.getConfiguration(extensionName);
-    if (config.get('server-path')) {
+    if (config.get('server_path')) {
       // no update checking if using custom server
       return;
     }
 
-    if (auto && !config.get('checkOnStartup')) {
+    if (auto && !config.get('check_on_startup')) {
       return;
     }
 

@@ -36,12 +36,17 @@
           ],
           "description": "Trace level of log"
         },
-        "ds-pinyin-lsp.show-status-bar": {
+        "ds-pinyin-lsp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable coc-ds-pinyin-lsp extension"
+        },
+        "ds-pinyin-lsp.show_status_bar": {
           "type": "boolean",
           "default": true,
           "description": "Show Pinyin in status bar"
         },
-        "ds-pinyin-lsp.status-bar-flag": {
+        "ds-pinyin-lsp.status_bar_flag": {
           "type": "string",
           "default": "Pinyin",
           "description": "Flat show in status bar"
@@ -56,12 +61,12 @@
           "default": true,
           "description": "If enable auto completion"
         },
-        "ds-pinyin-lsp.server-path": {
+        "ds-pinyin-lsp.server_path": {
           "type": "string",
           "default": "",
           "description": "Path to ds-pinyin-lsp command"
         },
-        "ds-pinyin-lsp.checkOnStartup": {
+        "ds-pinyin-lsp.check_on_startup": {
           "type": "boolean",
           "default": true,
           "description": "Check ds-pinyin-lsp release on start up"
@@ -70,11 +75,6 @@
           "type": "boolean",
           "default": true,
           "description": "Allow prompt?"
-        },
-        "ds-pinyin-lsp.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable coc-ds-pinyin-lsp extension"
         }
       }
     }
