@@ -155,14 +155,30 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
-    async fn turn_off_completion(&self) {
-        let mut setting = self.setting.lock().await;
-        (*setting).completion_on = false
-    }
+    async fn turn_completion(&self, params: Value) {
+        if let Some(completion_on) = params.get("completion_on") {
+            if completion_on.is_boolean() {
+                let mut setting = self.setting.lock().await;
+                (*setting).completion_on = completion_on.as_bool().unwrap_or(setting.completion_on);
 
-    async fn turn_on_completion(&self) {
-        let mut setting = self.setting.lock().await;
-        (*setting).completion_on = true
+                self.client
+                    .log_message(
+                        MessageType::INFO,
+                        &format!("completion_on: {}", setting.completion_on),
+                    )
+                    .await;
+            }
+        } else {
+            let mut setting = self.setting.lock().await;
+            (*setting).completion_on = !setting.completion_on;
+
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!("completion_on: {}", setting.completion_on),
+                )
+                .await;
+        }
     }
 
     async fn init(&self, initialization_options: &Option<Value>) {
@@ -266,8 +282,7 @@ async fn main() {
         documents: DashMap::new(),
         symbols,
     })
-    .custom_method("Turn/off/completion", Backend::turn_off_completion)
-    .custom_method("Turn/on/completion", Backend::turn_on_completion)
+    .custom_method("$/turn/completion", Backend::turn_completion)
     .finish();
 
     Server::new(stdin, stdout, socket).serve(service).await;
