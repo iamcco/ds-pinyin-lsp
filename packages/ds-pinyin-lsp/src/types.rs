@@ -16,11 +16,15 @@ impl Suggest {
 
 #[derive(Debug)]
 pub struct Setting {
-    pub db_path: String,
+    pub completion_on: bool,
+    pub db_path: Option<String>,
 }
 
 impl Setting {
-    pub fn new(db_path: String) -> Setting {
-        Setting { db_path }
+    pub fn new() -> Setting {
+        Setting {
+            completion_on: true,
+            db_path: None,
+        }
     }
 }

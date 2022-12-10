@@ -16,7 +16,7 @@ use tower_lsp::{Client, LanguageServer, LspService, Server};
 #[derive(Debug)]
 struct Backend {
     client: Client,
-    setting: Mutex<Option<Setting>>,
+    setting: Mutex<Setting>,
     conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
     symbols: DashMap<char, Vec<String>>,
@@ -88,6 +88,12 @@ impl LanguageServer for Backend {
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
+        // check completion on/off
+        let setting = self.setting.lock().await;
+        if !setting.completion_on {
+            return Ok(Some(CompletionResponse::Array(vec![])));
+        }
+
         let position = params.text_document_position.position;
         let uri = params.text_document_position.text_document.uri.to_string();
         let document = self.documents.get(&uri);
@@ -149,6 +155,16 @@ impl LanguageServer for Backend {
 }
 
 impl Backend {
+    async fn turn_off_completion(&self) {
+        let mut setting = self.setting.lock().await;
+        (*setting).completion_on = false
+    }
+
+    async fn turn_on_completion(&self) {
+        let mut setting = self.setting.lock().await;
+        (*setting).completion_on = true
+    }
+
     async fn init(&self, initialization_options: &Option<Value>) {
         if let Some(params) = initialization_options {
             let mut setting = self.setting.lock().await;
@@ -175,9 +191,7 @@ impl Backend {
                 }
 
                 // cache setting
-                *setting = Some(Setting {
-                    db_path: db_path.to_string(),
-                });
+                (*setting).db_path = Some(db_path.to_string());
 
                 // open db connection
                 let conn = Connection::open(db_path);
@@ -247,11 +261,13 @@ async fn main() {
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
-        setting: Mutex::new(None),
+        setting: Mutex::new(Setting::new()),
         conn: Mutex::new(None),
         documents: DashMap::new(),
         symbols,
     })
+    .custom_method("Turn/off/completion", Backend::turn_off_completion)
+    .custom_method("Turn/on/completion", Backend::turn_on_completion)
     .finish();
 
     Server::new(stdin, stdout, socket).serve(service).await;
