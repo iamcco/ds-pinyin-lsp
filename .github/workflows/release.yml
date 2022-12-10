@@ -1,9 +1,9 @@
 name: Rust
 
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [created]
+
 jobs:
   release:
     name: release ${{ matrix.target }}
