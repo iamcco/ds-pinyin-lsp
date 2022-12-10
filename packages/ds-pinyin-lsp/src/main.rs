@@ -3,7 +3,7 @@ use ds_pinyin_lsp::sqlite::query_dict;
 use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{
     get_pinyin, get_pre_line, long_suggests_to_completion_item, query_long_sentence,
-    suggests_to_completion_item,
+    suggests_to_completion_item, symbols_to_completion_item,
 };
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use rusqlite::Connection;
@@ -19,7 +19,7 @@ struct Backend {
     setting: Mutex<Option<Setting>>,
     conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
-    symbols: DashMap<String, Vec<String>>,
+    symbols: DashMap<char, Vec<String>>,
 }
 
 #[tower_lsp::async_trait]
@@ -100,9 +100,20 @@ impl LanguageServer for Backend {
         let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
 
         if pinyin.is_empty() {
+            // check symbol
+            if let Some(last_char) = pre_line.chars().last() {
+                if let Some(symbols) = self.symbols.get(&last_char) {
+                    return Ok(Some(CompletionResponse::List(CompletionList {
+                        is_incomplete: true,
+                        items: symbols_to_completion_item(last_char, symbols, position),
+                    })));
+                }
+            }
+
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
+        // pinyin range
         let range = Range::new(
             Position {
                 line: position.line,
@@ -204,35 +215,35 @@ async fn main() {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
     let symbols = [
-        (".", vec!["。", "·", "……"]),
-        ("`", vec!["·", "～"]),
-        ("\\", vec!["、"]),
-        (",", vec!["，"]),
-        (";", vec!["；"]),
-        (":", vec!["："]),
-        ("?", vec!["？"]),
-        ("!", vec!["！"]),
-        ("\"", vec!["“", "”"]),
-        ("'", vec!["‘", "’"]),
-        ("(", vec!["（"]),
-        (")", vec!["）"]),
-        ("-", vec!["——"]),
-        ("<", vec!["《"]),
-        (">", vec!["》"]),
-        ("[", vec!["【"]),
-        ("]", vec!["】"]),
-        ("$", vec!["¥"]),
+        ('.', vec!["。", "·", "……"]),
+        ('`', vec!["·", "～"]),
+        ('\\', vec!["、"]),
+        (',', vec!["，"]),
+        (';', vec!["；"]),
+        (':', vec!["："]),
+        ('?', vec!["？"]),
+        ('!', vec!["！"]),
+        ('\"', vec!["“", "”"]),
+        ('\'', vec!["‘", "’"]),
+        ('(', vec!["（"]),
+        (')', vec!["）"]),
+        ('-', vec!["——"]),
+        ('<', vec!["《"]),
+        ('>', vec!["》"]),
+        ('[', vec!["【"]),
+        (']', vec!["】"]),
+        ('$', vec!["¥"]),
     ]
     .into_iter()
     .map(|s| {
         (
-            s.0.to_string(),
+            s.0,
             s.1.into_iter()
                 .map(|s| s.to_string())
                 .collect::<Vec<String>>(),
         )
     })
-    .collect::<DashMap<String, Vec<String>>>();
+    .collect::<DashMap<char, Vec<String>>>();
 
     let (service, socket) = LspService::build(|client| Backend {
         client,

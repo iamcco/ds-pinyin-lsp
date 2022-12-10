@@ -124,6 +124,34 @@ pub fn suggests_to_completion_item(suggests: Vec<Suggest>, range: Range) -> Vec<
         .collect::<Vec<CompletionItem>>()
 }
 
+pub fn symbols_to_completion_item(
+    symbol: char,
+    symbols: Ref<char, Vec<String>>,
+    position: Position,
+) -> Vec<CompletionItem> {
+    symbols
+        .iter()
+        .map(|s| CompletionItem {
+            label: s.clone(),
+            kind: Some(CompletionItemKind::OPERATOR),
+            filter_text: Some(symbol.to_string()),
+            // use text_edit here to avoid client's replace mode
+            // it's no need to replace words behind cursor
+            text_edit: Some(CompletionTextEdit::Edit(TextEdit::new(
+                Range::new(
+                    Position {
+                        line: position.line,
+                        character: position.character - 1,
+                    },
+                    position,
+                ),
+                s.clone(),
+            ))),
+            ..Default::default()
+        })
+        .collect::<Vec<CompletionItem>>()
+}
+
 pub fn get_pinyin<'a>(pre_line: &'a str) -> Option<String> {
     if pre_line.is_empty() {
         return None;
