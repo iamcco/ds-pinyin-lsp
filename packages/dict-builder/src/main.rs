@@ -1,28 +1,39 @@
 use std::error::Error;
 
 use dict_builder::{
-    dict::format_dict,
+    dict::{format_dict, format_other_dict},
     sqlite::{batch_insert_records, create_dict_index, create_dict_table},
 };
 use rusqlite::Connection;
 
+enum DictTypes {
+    CN,
+    CC,
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let tables = ["dict"];
     let dict_paths = [
-        ("./dicts/8105.dict.yaml", tables[0]),
-        ("./dicts/base.dict.yaml", tables[0]),
-        ("./dicts/ext.dict.yaml", tables[0]),
-        ("./dicts/others.dict.yaml", tables[0]),
-        ("./dicts/sogou.dict.yaml", tables[0]),
-        ("./dicts/tencent.dict.yaml", tables[0]),
+        ("./dicts/8105.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/base.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/ext.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/others.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/sogou.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/tencent.dict.yaml", tables[0], DictTypes::CN),
+        ("./dicts/others.txt", tables[0], DictTypes::CC),
+        ("./dicts/emoji.txt", tables[0], DictTypes::CC),
     ];
 
     println!("Resolve dict list");
 
-    let dicts = dict_paths.map(|(dict, table)| {
+    let dicts = dict_paths.map(|(dict, table, dict_type)| {
         (
             table,
-            format_dict(dict).unwrap_or_else(|err| {
+            match dict_type {
+                DictTypes::CN => format_dict(dict),
+                DictTypes::CC => format_other_dict(dict),
+            }
+            .unwrap_or_else(|err| {
                 println!("Resolve dict [{}] error: {}", dict, err);
                 vec![]
             }),

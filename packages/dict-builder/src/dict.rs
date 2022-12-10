@@ -74,3 +74,64 @@ pub fn format_dict(dict_path: &str) -> Result<Vec<(String, String, u32)>, Box<dy
 
     Ok(res)
 }
+
+pub fn format_other_dict(
+    dict_path: &str,
+) -> Result<Vec<(String, String, u32)>, Box<dyn error::Error>> {
+    let res = read_to_string(dict_path)?
+        .lines()
+        .map(|line| {
+            let seps = line.split_whitespace().into_iter().collect::<Vec<&str>>();
+
+            if seps.len() > 2 {
+                let mut res = vec![];
+                for sep in &seps[2..=seps.len() - 1] {
+                    res.push(format!("{} {}", seps[0], sep));
+                }
+                return res.join("\n");
+            }
+
+            line.to_string()
+        })
+        .collect::<Vec<String>>()
+        .join("\n")
+        .lines()
+        .map(|line| {
+            // ignore empty line
+            // ignore comment line
+            if line.is_empty() || line.starts_with("#") {
+                return (String::new(), String::new(), 0);
+            }
+
+            // split by whitespace
+            let seps = line.split_whitespace().into_iter().collect::<Vec<&str>>();
+
+            // invalid line
+            if seps.len() < 2 {
+                return (String::new(), String::new(), 0);
+            }
+
+            // hanzi at rist column
+            let hanzi = seps[0];
+
+            // invalid hanzi
+            if hanzi.eq("") {
+                return (String::new(), String::new(), 0);
+            }
+
+            // the pinyin of hanzi
+            let pinyin = get_pinyin_from_hanzi(hanzi);
+
+            // invalid pinyin
+            if pinyin.eq("") {
+                return (String::new(), String::new(), 0);
+            }
+
+            (pinyin, seps[1].to_string(), 100)
+        })
+        // filter out empty line
+        .filter(|line| !line.0.is_empty())
+        .collect();
+
+    Ok(res)
+}
