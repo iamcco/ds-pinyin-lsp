@@ -185,15 +185,21 @@ impl Backend {
         if let Some(params) = initialization_options {
             let mut setting = self.setting.lock().await;
 
+            (*setting).completion_on = params
+                .get("completion_on")
+                .unwrap_or(&Value::Bool(setting.completion_on))
+                .as_bool()
+                .unwrap_or(setting.completion_on);
+
             let db_path = &Value::String(String::new());
 
-            let db_path = params.get("db-path").unwrap_or(&db_path);
+            let db_path = params.get("db_path").unwrap_or(&db_path);
 
             // invalid db_path
             if !db_path.is_string() {
                 return self
                     .client
-                    .show_message(MessageType::ERROR, "ds-pinyin-lsp db-path must be string!")
+                    .show_message(MessageType::ERROR, "ds-pinyin-lsp db_path must be string!")
                     .await;
             }
 
@@ -202,7 +208,7 @@ impl Backend {
                 if db_path.is_empty() {
                     return self
                         .client
-                        .show_message(MessageType::ERROR, "ds-pinyin-lsp db-path is empty string!")
+                        .show_message(MessageType::ERROR, "ds-pinyin-lsp db_path is empty string!")
                         .await;
                 }
 
@@ -233,7 +239,7 @@ impl Backend {
                 .client
                 .show_message(
                     MessageType::ERROR,
-                    "ds-pinyin-lsp initialization_options is missing, it must include db-path setting!",
+                    "ds-pinyin-lsp initialization_options is missing, it must include db_path setting!",
                 )
                 .await;
         }
