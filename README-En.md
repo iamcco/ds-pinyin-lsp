@@ -34,7 +34,8 @@ Or add config to coc-settings.json
       "command": "path to ds-pinyin-lsp command",
       "filetypes": ["*"],
       "initializationOptions": {
-        "db-path": "path to dict.db3"
+        "db_path": "path to dict.db3",
+        "completion_on": true
       }
     }
   }

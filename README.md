@@ -1,22 +1,8 @@
 # 超，超简单的拼音输入法
 
-![](https://user-images.githubusercontent.com/5492542/205504265-0875046a-aab4-4672-9467-048cd43460a9.png)
+![](https://user-images.githubusercontent.com/5492542/206855944-7be15fa8-e2eb-4325-97f9-e2a33c07f6c7.png)
 
 中文 [English](./README-En.md)
-
-## TODO
-
-- feature
-  - [ ] 开关控制是否补全
-  - [x] 状态栏符号设置
-- Suggest
-  - [ ] 中文前缀
-  - [ ] 长句分段匹配
-    > 从后面开始减少拼音匹配
-  - [ ] emoji
-  - [ ] 中文标点符号
-  - [ ] 偏旁
-  - [ ] 多音字
 
 ## 介绍
 
@@ -25,8 +11,8 @@
 
 **注意**
 
-- 当前只支持**全拼**
-- 需要配合 LSP 客户端使用，比如 coc.nvim / VS Code 等。
+- 非专业输入法，不是输入法的代替品，只适合少量需要输入中文的场景。
+- 只支持**全拼**， 需要配合 LSP 客户端使用，比如 coc.nvim / VS Code 等。
 
 ## 配合 coc.nvim 使用
 
@@ -34,7 +20,7 @@
 
 > 如果不启用这个设置，那么在中文字符后面输入拼音会得不到建议选项。
 
-使用扩展
+使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
 
 ```
 :CocInstall coc-ds-pinyin-lsp
@@ -48,11 +34,16 @@
       "command": "path to ds-pinyin-lsp command",
       "filetypes": ["*"],
       "initializationOptions": {
-        "db-path": "path to dict.db3"
+        "db_path": "path to dict.db3",
+        "completion_on": true
       }
     }
   }
 ```
+
+可以通过向服务端发送通知（Notification）来关闭/开启/切换自动补全
+
+- `$/turn/completion`: 参数: `{ completion_on?: boolean }`
 
 ## Packages
 
