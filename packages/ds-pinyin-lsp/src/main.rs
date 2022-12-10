@@ -1,8 +1,9 @@
 use dashmap::DashMap;
+use ds_pinyin_lsp::sqlite::{query_dict, query_words};
 use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{
-    get_pinyin, get_pre_line, long_suggest_to_completion_item, query_dict, query_long_sentence,
-    query_words, suggest_to_completion_item,
+    get_pinyin, get_pre_line, long_suggests_to_completion_item, query_long_sentence,
+    suggests_to_completion_item,
 };
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use rusqlite::Connection;
@@ -106,41 +107,41 @@ impl LanguageServer for Backend {
 
         if let Some(ref conn) = *self.conn.lock().await {
             // words match
-            if let Ok(suggest) = query_words(conn, &pinyin, true) {
-                if suggest.len() > 0 {
+            if let Ok(suggests) = query_words(conn, &pinyin, true) {
+                if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: suggest_to_completion_item(suggest, range),
+                        items: suggests_to_completion_item(suggests, range),
                     })));
                 }
             }
 
             // words search
-            if let Ok(suggest) = query_words(conn, &pinyin, false) {
-                if suggest.len() > 0 {
+            if let Ok(suggests) = query_words(conn, &pinyin, false) {
+                if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: suggest_to_completion_item(suggest, range),
+                        items: suggests_to_completion_item(suggests, range),
                     })));
                 }
             }
 
             // dict search
-            if let Ok(suggest) = query_dict(conn, &pinyin) {
-                if suggest.len() > 0 {
+            if let Ok(suggests) = query_dict(conn, &pinyin) {
+                if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: suggest_to_completion_item(suggest, range),
+                        items: suggests_to_completion_item(suggests, range),
                     })));
                 }
             }
 
-            // long statement
-            if let Ok(Some(suggest)) = query_long_sentence(conn, &pinyin) {
-                if suggest.len() > 0 {
+            // long sentence
+            if let Ok(Some(suggests)) = query_long_sentence(conn, &pinyin) {
+                if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
-                        items: long_suggest_to_completion_item(suggest, range),
+                        items: long_suggests_to_completion_item(suggests, range),
                     })));
                 }
             }

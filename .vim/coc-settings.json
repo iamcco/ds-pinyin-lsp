@@ -2,13 +2,21 @@
   "cSpell.words": [
     "Quickpick",
     "aarch",
+    "concat",
+    "dashmap",
     "esbuild",
+    "hanzi",
     "iamcco",
+    "mapref",
     "msvc",
+    "nihao",
+    "nihaonishishui",
     "nixos",
     "nothrow",
     "nvim",
     "patchelf",
-    "quanpin"
+    "quanpin",
+    "rusqlite",
+    "substr"
   ]
 }
