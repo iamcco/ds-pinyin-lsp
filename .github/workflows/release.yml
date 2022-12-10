@@ -25,6 +25,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          SRC_DIR: ./package/ds-pinyin-lsp/
+          SRC_DIR: ./packages/ds-pinyin-lsp/
           RUSTTARGET: ${{ matrix.target }}
           ARCHIVE_TYPES: ${{ matrix.archive }}
