@@ -19,6 +19,27 @@ export class Ctx {
       statusBar.show();
       this.extCtx.subscriptions.push(statusBar);
     }
+
+    this.subscriptions.push(
+      commands.registerCommand('ds-pinyin-lsp.turn-on-completion', () => {
+        if (!this.client) {
+          return;
+        }
+        this.client.sendNotification('$/turn/completion', { completion_on: true });
+      }),
+      commands.registerCommand('ds-pinyin-lsp.turn-off-completion', () => {
+        if (!this.client) {
+          return;
+        }
+        this.client.sendNotification('$/turn/completion', { completion_on: false });
+      }),
+      commands.registerCommand('ds-pinyin-lsp.toggle-completion', () => {
+        if (!this.client) {
+          return;
+        }
+        this.client.sendNotification('$/turn/completion', {});
+      }),
+    );
   }
 
   async startServer() {
@@ -36,7 +57,8 @@ export class Ctx {
       {
         documentSelector: ['*'],
         initializationOptions: {
-          'db-path': workspace.getConfiguration(extensionName).get('db-path', ''),
+          db_path: workspace.getConfiguration(extensionName).get('db_path', ''),
+          completion_on: workspace.getConfiguration(extensionName).get('completion_on', true),
         },
       },
     );

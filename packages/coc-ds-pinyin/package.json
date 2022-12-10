@@ -46,10 +46,15 @@
           "default": "Pinyin",
           "description": "Flat show in status bar"
         },
-        "ds-pinyin-lsp.db-path": {
+        "ds-pinyin-lsp.db_path": {
           "type": "string",
           "default": "",
           "description": "db path"
+        },
+        "ds-pinyin-lsp.completion_on": {
+          "type": "boolean",
+          "default": true,
+          "description": "If enable auto completion"
         },
         "ds-pinyin-lsp.server-path": {
           "type": "string",

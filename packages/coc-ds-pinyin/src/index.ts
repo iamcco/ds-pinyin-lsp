@@ -47,7 +47,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
       return;
     }
 
-    if (!config.get('db-path') && !existsSync(join(context.storagePath, dbName))) {
+    if (!config.get('db_path') && !existsSync(join(context.storagePath, dbName))) {
       let msg = `${dbName} is not found, download from GitHub release?`;
       let ret = -1;
       if (config.get('prompt', true)) {
