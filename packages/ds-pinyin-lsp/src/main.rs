@@ -19,6 +19,7 @@ struct Backend {
     setting: Mutex<Option<Setting>>,
     conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
+    symbols: DashMap<String, Vec<String>>,
 }
 
 #[tower_lsp::async_trait]
@@ -34,7 +35,12 @@ impl LanguageServer for Backend {
                 )),
                 completion_provider: Some(CompletionOptions {
                     resolve_provider: Some(false),
-                    trigger_characters: Some(vec![]),
+                    trigger_characters: Some(
+                        self.symbols
+                            .iter()
+                            .map(|s| s.key().to_string())
+                            .collect::<Vec<String>>(),
+                    ),
                     work_done_progress_options: Default::default(),
                     all_commit_characters: None,
                 }),
@@ -106,8 +112,8 @@ impl LanguageServer for Backend {
         );
 
         if let Some(ref conn) = *self.conn.lock().await {
-            // dict search
-            if let Ok(suggests) = query_dict(conn, &pinyin) {
+            // dict search match
+            if let Ok(suggests) = query_dict(conn, &pinyin, 50) {
                 if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
@@ -197,12 +203,43 @@ impl Backend {
 async fn main() {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
+    let symbols = [
+        (".", vec!["。", "·", "……"]),
+        ("`", vec!["·", "～"]),
+        ("\\", vec!["、"]),
+        (",", vec!["，"]),
+        (";", vec!["；"]),
+        (":", vec!["："]),
+        ("?", vec!["？"]),
+        ("!", vec!["！"]),
+        ("\"", vec!["“", "”"]),
+        ("'", vec!["‘", "’"]),
+        ("(", vec!["（"]),
+        (")", vec!["）"]),
+        ("-", vec!["——"]),
+        ("<", vec!["《"]),
+        (">", vec!["》"]),
+        ("[", vec!["【"]),
+        ("]", vec!["】"]),
+        ("$", vec!["¥"]),
+    ]
+    .into_iter()
+    .map(|s| {
+        (
+            s.0.to_string(),
+            s.1.into_iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<String>>(),
+        )
+    })
+    .collect::<DashMap<String, Vec<String>>>();
 
     let (service, socket) = LspService::build(|client| Backend {
         client,
         setting: Mutex::new(None),
         conn: Mutex::new(None),
         documents: DashMap::new(),
+        symbols,
     })
     .finish();
 

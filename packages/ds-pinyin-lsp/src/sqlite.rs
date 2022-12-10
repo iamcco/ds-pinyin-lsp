@@ -23,13 +23,48 @@ fn query_suggests(conn: &Connection, query: &str) -> Result<Vec<Suggest>, Box<dy
     Ok(res)
 }
 
-/// query in dict table
-pub fn query_dict(conn: &Connection, pinyin: &str) -> Result<Vec<Suggest>, Box<dyn Error>> {
+/// query dict
+pub fn query_dict(
+    conn: &Connection,
+    pinyin: &str,
+    size: usize,
+) -> Result<Vec<Suggest>, Box<dyn Error>> {
+    let mut suggests = query_match_dict(conn, pinyin, size)?;
+
+    if suggests.len() < size {
+        let mut res = query_start_match_dict(conn, pinyin, size - suggests.len())?;
+        suggests.append(&mut res);
+    }
+
+    Ok(suggests)
+}
+
+/// query match in dict table
+pub fn query_match_dict(
+    conn: &Connection,
+    pinyin: &str,
+    size: usize,
+) -> Result<Vec<Suggest>, Box<dyn Error>> {
     query_suggests(
         conn,
         &format!(
-            "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit 50",
-            pinyin, pinyin
+            "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin = '{}' ORDER BY priority DESC limit {}",
+            pinyin, size
+        )
+     )
+}
+
+/// query start match in dict table
+pub fn query_start_match_dict(
+    conn: &Connection,
+    pinyin: &str,
+    size: usize,
+) -> Result<Vec<Suggest>, Box<dyn Error>> {
+    query_suggests(
+        conn,
+        &format!(
+            "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin != '{}' and pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit {}",
+            pinyin, pinyin, pinyin, size
         )
      )
 }
@@ -74,12 +109,12 @@ pub fn query_the_longest_match<'a>(
 pub mod test_sqlite {
     use rusqlite::Connection;
 
-    use super::query_dict;
+    use super::query_start_match_dict;
 
     #[test]
     fn test_query_dict() {
         let conn = Connection::open("../dict-builder/dicts/dict.db3").expect("Open Connection");
-        if let Ok(suggests) = query_dict(&conn, "ni") {
+        if let Ok(suggests) = query_start_match_dict(&conn, "ni", 10) {
             assert!(suggests.len() > 0);
         }
     }

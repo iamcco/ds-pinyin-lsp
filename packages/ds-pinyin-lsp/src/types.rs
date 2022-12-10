@@ -1,11 +1,11 @@
 pub struct Suggest {
     pub pinyin: String,
     pub hanzi: String,
-    pub priority: u32,
+    pub priority: usize,
 }
 
 impl Suggest {
-    pub fn new(pinyin: String, hanzi: String, priority: u32) -> Suggest {
+    pub fn new(pinyin: String, hanzi: String, priority: usize) -> Suggest {
         Suggest {
             pinyin,
             hanzi,
