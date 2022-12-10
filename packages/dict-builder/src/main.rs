@@ -7,14 +7,14 @@ use dict_builder::{
 use rusqlite::Connection;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let tables = ["words", "dict"];
+    let tables = ["dict"];
     let dict_paths = [
         ("./dicts/8105.dict.yaml", tables[0]),
-        ("./dicts/base.dict.yaml", tables[1]),
-        ("./dicts/ext.dict.yaml", tables[1]),
-        ("./dicts/others.dict.yaml", tables[1]),
-        ("./dicts/sogou.dict.yaml", tables[1]),
-        ("./dicts/tencent.dict.yaml", tables[1]),
+        ("./dicts/base.dict.yaml", tables[0]),
+        ("./dicts/ext.dict.yaml", tables[0]),
+        ("./dicts/others.dict.yaml", tables[0]),
+        ("./dicts/sogou.dict.yaml", tables[0]),
+        ("./dicts/tencent.dict.yaml", tables[0]),
     ];
 
     println!("Resolve dict list");
