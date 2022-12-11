@@ -1,7 +1,7 @@
 /*
  * https://github.com/fannheyward/coc-rust-analyzer/blob/master/src/downloader.ts
  */
-import { exec, spawnSync } from 'child_process';
+import { exec } from 'child_process';
 import { ExtensionContext, window } from 'coc.nvim';
 import { randomBytes } from 'crypto';
 import { createWriteStream, PathLike, promises as fs } from 'fs';
@@ -67,29 +67,16 @@ export interface ReleaseTag {
   asset?: Asset;
 }
 
-function isMusl(): boolean {
-  // We can detect Alpine by checking `/etc/os-release` but not Void Linux musl.
-  // Instead, we run `ldd` since it advertises the libc which it belongs to.
-  const res = spawnSync('ldd', ['--version']);
-  return res.stderr != null && res.stderr.indexOf('musl libc') >= 0;
-}
-
 export function getPlatform(): string | undefined {
   const platforms: { [key: string]: string } = {
-    'ia32 win32': 'x86_64-pc-windows-msvc',
-    'x64 win32': 'x86_64-pc-windows-msvc',
-    'x64 linux': 'x86_64-unknown-linux-gnu',
+    'ia32 win32': 'x86_64-pc-windows-gnu',
+    'x64 win32': 'x86_64-pc-windows-gnu',
+    'x64 linux': 'x86_64-unknown-linux-musl',
     'x64 darwin': 'x86_64-apple-darwin',
-    'arm64 win32': 'aarch64-pc-windows-msvc',
-    'arm64 linux': 'aarch64-unknown-linux-gnu',
     'arm64 darwin': 'aarch64-apple-darwin',
   };
 
-  let platform = platforms[`${process.arch} ${process.platform}`];
-  if (platform === 'x86_64-unknown-linux-gnu' && isMusl()) {
-    platform = 'x86_64-unknown-linux-musl';
-  }
-  return platform;
+  return platforms[`${process.arch} ${process.platform}`];
 }
 
 export async function getLatestRelease(
@@ -112,7 +99,7 @@ export async function getLatestRelease(
     return;
   }
   const asset = release.assets.find((val) =>
-    val.browser_download_url.endsWith(`${type === 'db' ? dbName : platform}.gz`),
+    val.browser_download_url.endsWith(`${type === 'db' ? dbName : platform}.zip`),
   );
   if (!asset) {
     console.error(`getLatestRelease failed: ${release}`);
