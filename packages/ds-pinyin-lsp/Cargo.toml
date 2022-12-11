@@ -2,6 +2,9 @@
 name = "ds-pinyin-lsp"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/iamcco/ds-pinyin-lsp"
+description = "Pinyin language server for input Chinese."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

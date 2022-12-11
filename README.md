@@ -41,6 +41,8 @@
   }
 ```
 
+> `dict.db3` 可以从 [Release](https://github.com/iamcco/ds-pinyin-lsp/releases/tag/v0.1.0) 下载。
+
 可以通过向服务端发送通知（Notification）来关闭/开启/切换自动补全
 
 - `$/turn/completion`: 参数: `{ completion_on?: boolean }`
