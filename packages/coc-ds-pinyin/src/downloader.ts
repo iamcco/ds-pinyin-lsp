@@ -7,10 +7,10 @@ import { randomBytes } from 'crypto';
 import { createWriteStream, PathLike, promises as fs } from 'fs';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
-import * as zlib from 'zlib';
 import path from 'path';
 import stream from 'stream';
 import util from 'util';
+import extractZip from 'extract-zip';
 import { dbName, extensionName } from './constant';
 
 const pipeline = util.promisify(stream.pipeline);
@@ -85,7 +85,7 @@ export async function getLatestRelease(
 ): Promise<ReleaseTag | undefined> {
   const releaseURL = !releaseTag
     ? `https://api.github.com/repos/iamcco/${extensionName}/releases/latest`
-    : `https://api.github.com/repos/iamcco/${extensionName}/releases/tags${releaseTag}`;
+    : `https://api.github.com/repos/iamcco/${extensionName}/releases/tags/${releaseTag}`;
   const response = await fetch(releaseURL, { agent });
   if (!response.ok) {
     console.error(await response.text());
@@ -138,17 +138,26 @@ export async function downloadServer(context: ExtensionContext, release: Release
   const tempFile = path.join(context.storagePath, `${release.name}${randomHex}`);
 
   const destFileStream = createWriteStream(tempFile, { mode: 0o755 });
-  await pipeline(resp.body.pipe(zlib.createGunzip()), destFileStream);
+
+  await pipeline(resp.body, destFileStream);
+
+  await fs.unlink(_path).catch((err) => {
+    if (err.code !== 'ENOENT') throw err;
+  });
+
+  await extractZip(tempFile, {
+    dir: context.storagePath,
+  });
+
+  await fs.unlink(tempFile).catch((err) => {
+    if (err.code !== 'ENOENT') throw err;
+  });
+
   await new Promise<void>((resolve) => {
     destFileStream.on('close', resolve);
     destFileStream.destroy();
     setTimeout(resolve, 1000);
   });
-
-  await fs.unlink(_path).catch((err) => {
-    if (err.code !== 'ENOENT') throw err;
-  });
-  await fs.rename(tempFile, _path);
 
   await context.globalState.update(isDb ? 'release-db' : 'release', release.tag);
 

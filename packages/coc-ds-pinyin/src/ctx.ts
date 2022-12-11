@@ -6,7 +6,7 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import which from 'which';
-import { dbTag, extensionName } from './constant';
+import { dbName, dbTag, extensionName } from './constant';
 import { downloadServer, getLatestRelease } from './downloader';
 
 export class Ctx {
@@ -57,7 +57,7 @@ export class Ctx {
       {
         documentSelector: ['*'],
         initializationOptions: {
-          db_path: workspace.getConfiguration(extensionName).get('db_path', ''),
+          db_path: workspace.getConfiguration(extensionName).get('db_path') || join(this.extCtx.storagePath, dbName),
           completion_on: workspace.getConfiguration(extensionName).get('completion_on', true),
         },
       },
