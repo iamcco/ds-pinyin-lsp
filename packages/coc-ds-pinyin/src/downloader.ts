@@ -130,7 +130,7 @@ export async function downloadServer(context: ExtensionContext, release: Release
   resp.body.on('data', (chunk: Buffer) => {
     cur += chunk.length;
     const p = ((cur / len) * 100).toFixed(2);
-    statusItem.text = `${p}% Downloading ${extensionName} ${release.tag}`;
+    statusItem.text = `${p}% Downloading ${isDb ? dbName : extensionName} ${release.tag}`;
   });
 
   const _path = path.join(context.storagePath, release.name); // lgtm[js/shell-command-constructed-from-input]
@@ -139,19 +139,24 @@ export async function downloadServer(context: ExtensionContext, release: Release
 
   const destFileStream = createWriteStream(tempFile, { mode: 0o755 });
 
-  await pipeline(resp.body, destFileStream);
+  try {
+    await pipeline(resp.body, destFileStream);
 
-  await fs.unlink(_path).catch((err) => {
-    if (err.code !== 'ENOENT') throw err;
-  });
+    await fs.unlink(_path).catch((err) => {
+      if (err.code !== 'ENOENT') throw err;
+    });
 
-  await extractZip(tempFile, {
-    dir: context.storagePath,
-  });
+    await extractZip(tempFile, {
+      dir: context.storagePath,
+    });
 
-  await fs.unlink(tempFile).catch((err) => {
-    if (err.code !== 'ENOENT') throw err;
-  });
+    await fs.unlink(tempFile).catch((err) => {
+      if (err.code !== 'ENOENT') throw err;
+    });
+  } catch (error) {
+    statusItem.hide();
+    throw error;
+  }
 
   await new Promise<void>((resolve) => {
     destFileStream.on('close', resolve);

@@ -136,7 +136,7 @@ export class Ctx {
     const msg = `${type} has a new release: ${latest.tag}, you're using ${old}. Would you like to download from GitHub`;
     let ret = 0;
     if (config.get('prompt', true)) {
-      ret = await window.showQuickpick(['Yes, download the latest ${type}', 'Check GitHub releases', 'Cancel'], msg);
+      ret = await window.showQuickpick([`Yes, download the latest ${type}`, 'Check GitHub releases', 'Cancel'], msg);
     }
     if (ret === 0) {
       if (process.platform === 'win32') {
