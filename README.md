@@ -26,7 +26,8 @@
 :CocInstall coc-ds-pinyin-lsp
 ```
 
-或者可以添加以下配置到 `coc-settings.json`
+或从 [Release](https://github.com/iamcco/ds-pinyin-lsp/releases/tag/v0.1.0) 下载 `ds-pinyin-lsp` 或
+通过 `cargo install ds-pinyin-lsp` 安装 `ds-pinyin-lsp` 然后添加以下配置到 `coc-settings.json`
 
 ``` jsonc
   "languageserver": {
