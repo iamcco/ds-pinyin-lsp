@@ -1,6 +1,6 @@
 {
   "name": "coc-ds-pinyin-lsp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "pinyin input support for (Neo)vim",
   "author": "iamcco <ooiss@qq.com>",
   "license": "MIT",
@@ -60,6 +60,21 @@
           "type": "boolean",
           "default": true,
           "description": "If enable auto completion"
+        },
+        "ds-pinyin-lsp.show_symbols": {
+          "type": "boolean",
+          "default": true,
+          "description": "If show Chinese symbols"
+        },
+        "ds-pinyin-lsp.match_as_same_as_input": {
+          "type": "boolean",
+          "default": false,
+          "description": "If only show the items match the same as input"
+        },
+        "ds-pinyin-lsp.match_long_input": {
+          "type": "boolean",
+          "default": true,
+          "description": "If show items for the long input"
         },
         "ds-pinyin-lsp.server_path": {
           "type": "string",

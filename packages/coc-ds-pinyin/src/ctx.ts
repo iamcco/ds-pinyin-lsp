@@ -56,22 +56,29 @@ export class Ctx {
       },
       {
         documentSelector: ['*'],
-        initializationOptions: {
-          db_path: workspace.getConfiguration(extensionName).get('db_path') || join(this.extCtx.storagePath, dbName),
-          completion_on: workspace.getConfiguration(extensionName).get('completion_on', true),
-        },
+        initializationOptions: this.configuration,
       },
     );
 
     this.client = client;
 
-    this.extCtx.subscriptions.push({
-      dispose: () => {
-        if (this.client) {
-          this.client.stop();
+    this.extCtx.subscriptions.push(
+      workspace.onDidChangeConfiguration((evt) => {
+        if (!evt.affectsConfiguration(extensionName) || !this.client?.started) {
+          return;
         }
+        this.client.sendNotification('workspace/didChangeConfiguration', {
+          settings: this.configuration,
+        });
+      }),
+      {
+        dispose: () => {
+          if (this.client) {
+            this.client.stop();
+          }
+        },
       },
-    });
+    );
 
     this.client.start();
   }
@@ -84,6 +91,18 @@ export class Ctx {
 
   get subscriptions(): Disposable[] {
     return this.extCtx.subscriptions;
+  }
+
+  get configuration() {
+    const config = workspace.getConfiguration(extensionName);
+    const db_path = join(this.extCtx.storagePath, dbName);
+    return {
+      db_path: config.get<string>('db_path') || (existsSync(db_path) ? db_path : ''),
+      completion_on: config.get<boolean>('completion_on', true),
+      show_symbols: config.get<boolean>('show_symbols', true),
+      match_as_same_as_input: config.get<boolean>('match_as_same_as_input', false),
+      match_long_input: config.get<boolean>('match_long_input', true),
+    };
   }
 
   resolveBin(): string | undefined {
