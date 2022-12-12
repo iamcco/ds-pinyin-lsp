@@ -120,16 +120,19 @@ impl LanguageServer for Backend {
         let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
 
         if pinyin.is_empty() {
-            // check symbol
-            if let Some(last_char) = pre_line.chars().last() {
-                if let Some(symbols) = self.symbols.get(&last_char) {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: symbols_to_completion_item(last_char, symbols, position),
-                    })));
+            if setting.show_symbols {
+                // check symbol
+                if let Some(last_char) = pre_line.chars().last() {
+                    if let Some(symbols) = self.symbols.get(&last_char) {
+                        return Ok(Some(CompletionResponse::List(CompletionList {
+                            is_incomplete: true,
+                            items: symbols_to_completion_item(last_char, symbols, position),
+                        })));
+                    }
                 }
             }
 
+            // return for empty pinyin
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
@@ -144,7 +147,7 @@ impl LanguageServer for Backend {
 
         if let Some(ref conn) = *self.conn.lock().await {
             // dict search match
-            if let Ok(suggests) = query_dict(conn, &pinyin, 50) {
+            if let Ok(suggests) = query_dict(conn, &pinyin, 50, setting.match_as_same_as_input) {
                 if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
@@ -154,17 +157,31 @@ impl LanguageServer for Backend {
             }
 
             // long sentence
-            if let Ok(Some(suggests)) = query_long_sentence(conn, &pinyin) {
-                if suggests.len() > 0 {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: long_suggests_to_completion_item(suggests, range),
-                    })));
+            if setting.match_long_input {
+                if let Ok(Some(suggests)) =
+                    query_long_sentence(conn, &pinyin, setting.match_as_same_as_input)
+                {
+                    if suggests.len() > 0 {
+                        return Ok(Some(CompletionResponse::List(CompletionList {
+                            is_incomplete: true,
+                            items: long_suggests_to_completion_item(suggests, range),
+                        })));
+                    }
                 }
             }
         };
 
-        Ok(Some(CompletionResponse::Array(vec![])))
+        // Note:
+        // hack ghost item for more completion request from client
+        Ok(Some(CompletionResponse::List(CompletionList {
+            is_incomplete: true,
+            items: vec![CompletionItem {
+                label: String::from("Pinyin Placeholder"),
+                kind: Some(CompletionItemKind::TEXT),
+                filter_text: Some(String::from("‍")),
+                ..Default::default()
+            }],
+        })))
     }
 }
 
@@ -267,6 +284,46 @@ impl Backend {
         if setting.db_path.is_none() {
             self.client
                 .show_message(MessageType::ERROR, "[ds-pinyin-lsp]: db_path is missing!")
+                .await;
+        }
+
+        // show_symbols
+        if let Some(show_symbols) = params.get("show_symbols") {
+            (*setting).show_symbols = show_symbols.as_bool().unwrap_or(setting.show_symbols);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!("[ds-pinyin-lsp]: show_symbols to {}!", show_symbols),
+                )
+                .await;
+        }
+
+        // match_as_same_as_input
+        if let Some(match_as_same_as_input) = params.get("match_as_same_as_input") {
+            (*setting).match_as_same_as_input = match_as_same_as_input
+                .as_bool()
+                .unwrap_or(setting.match_as_same_as_input);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!(
+                        "[ds-pinyin-lsp]: match_as_same_as_input to {}!",
+                        match_as_same_as_input
+                    ),
+                )
+                .await;
+        }
+
+        // match_long_input
+        if let Some(match_long_input) = params.get("match_long_input") {
+            (*setting).match_long_input = match_long_input
+                .as_bool()
+                .unwrap_or(setting.match_long_input);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!("[ds-pinyin-lsp]: match_long_input to {}!", match_long_input),
+                )
                 .await;
         }
     }

@@ -35,13 +35,16 @@ pub fn get_pre_line<'a>(
 pub fn query_long_sentence(
     conn: &Connection,
     pinyin: &str,
+    match_as_same_as_input: bool,
 ) -> Result<Option<Vec<Suggest>>, Box<dyn Error>> {
     let mut res = vec![];
 
     let mut remain = pinyin.to_string();
 
     while remain.len() > 0 {
-        if let Ok(Some((match_pinyin, suggests))) = query_the_longest_match(conn, &remain) {
+        if let Ok(Some((match_pinyin, suggests))) =
+            query_the_longest_match(conn, &remain, match_as_same_as_input)
+        {
             res.push(suggests);
             remain = Regex::new(&format!("^{}", match_pinyin))
                 .unwrap()
@@ -180,7 +183,7 @@ pub mod test_utils {
     #[test]
     fn test_query_long_sentence() {
         let conn = Connection::open("../dict-builder/dicts/dict.db3").expect("Open Connection");
-        if let Ok(Some(suggests)) = query_long_sentence(&conn, "nihaonishishui") {
+        if let Ok(Some(suggests)) = query_long_sentence(&conn, "nihaonishishui", true) {
             assert_eq!(
                 suggests
                     .into_iter()
