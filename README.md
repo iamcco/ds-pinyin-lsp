@@ -16,10 +16,6 @@
 
 ## 配合 coc.nvim 使用
 
-需要在 `coc-settings.json` 配置中启用 `"suggest.asciiCharactersOnly": true,` 设置。
-
-> 如果不启用这个设置，那么在中文字符后面输入拼音会得不到建议选项。
-
 ##### 1. 使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
 
 ```
