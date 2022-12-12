@@ -13,6 +13,7 @@ pub fn get_pinyin_from_hanzi(hanzi: &str) -> String {
         })
         .collect::<Vec<&str>>()
         .join("")
+        .replace("ü", "v")
 }
 
 pub fn format_dict(dict_path: &str) -> Result<Vec<(String, String, u32)>, Box<dyn error::Error>> {
