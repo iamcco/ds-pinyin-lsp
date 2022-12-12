@@ -108,17 +108,18 @@ export class Ctx {
   resolveBin(): string | undefined {
     // 1. from config, custom server path
     // 2. bundled
-    let bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
-    if (!existsSync(bin)) {
-      bin = workspace.getConfiguration(extensionName).get<string>('server_path', '');
+    let bin = workspace.getConfiguration(extensionName).get<string>('server_path', '');
 
-      if (bin) {
-        if (bin?.startsWith('~/')) {
-          bin = bin.replace('~', homedir());
-        }
-
-        bin = which.sync(bin, { nothrow: true }) || bin;
+    if (bin) {
+      if (bin?.startsWith('~/')) {
+        bin = bin.replace('~', homedir());
       }
+
+      bin = which.sync(bin, { nothrow: true }) || bin;
+    }
+
+    if (!bin || !existsSync(bin)) {
+      bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
     }
 
     if (!bin) {
