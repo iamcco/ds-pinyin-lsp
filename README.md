@@ -35,8 +35,11 @@
       "command": "path to ds-pinyin-lsp command",
       "filetypes": ["*"],
       "initializationOptions": {
-        "db_path": "path to dict.db3",
-        "completion_on": true
+        "db_path": "path to dict.db3",   // dict.db3 字典文件
+        "completion_on": true,           // 是否开启自动补全
+        "show_symbols": true,            // 是否补全中文标点符号
+        "match_as_same_as_input": true,  // 是否只显示完全匹配结果，比如: 输入 `pinyin` 会只显示 `拼音` 选项，不会显示 `拼音输入法` 选项
+        "match_long_input": true,        // 是否显示长句匹配，比如：输入 `chaojaindandepinyinshurufa` 会把 `超简单` `的` `拼音输入法` 三个选项拼起来作为补全选项
       }
     }
   }
