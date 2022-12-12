@@ -25,7 +25,17 @@ struct Backend {
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, params: InitializeParams) -> Result<InitializeResult> {
-        self.init(&params.initialization_options).await;
+        if let Some(initialization_options) = params.initialization_options {
+            self.change_configuration(&initialization_options).await;
+        } else {
+            self
+                .client
+                .show_message(
+                    MessageType::ERROR,
+                    "[ds-pinyin-lsp]: initialization_options is missing, it must include db_path setting!",
+                )
+                .await;
+        }
 
         Ok(InitializeResult {
             server_info: None,
@@ -51,6 +61,10 @@ impl LanguageServer for Backend {
 
     async fn shutdown(&self) -> Result<()> {
         Ok(())
+    }
+
+    async fn did_change_configuration(&self, params: DidChangeConfigurationParams) {
+        self.change_configuration(&params.settings).await;
     }
 
     async fn did_open(&self, params: DidOpenTextDocumentParams) {
@@ -106,16 +120,19 @@ impl LanguageServer for Backend {
         let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
 
         if pinyin.is_empty() {
-            // check symbol
-            if let Some(last_char) = pre_line.chars().last() {
-                if let Some(symbols) = self.symbols.get(&last_char) {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: symbols_to_completion_item(last_char, symbols, position),
-                    })));
+            if setting.show_symbols {
+                // check symbol
+                if let Some(last_char) = pre_line.chars().last() {
+                    if let Some(symbols) = self.symbols.get(&last_char) {
+                        return Ok(Some(CompletionResponse::List(CompletionList {
+                            is_incomplete: true,
+                            items: symbols_to_completion_item(last_char, symbols, position),
+                        })));
+                    }
                 }
             }
 
+            // return for empty pinyin
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
@@ -130,7 +147,7 @@ impl LanguageServer for Backend {
 
         if let Some(ref conn) = *self.conn.lock().await {
             // dict search match
-            if let Ok(suggests) = query_dict(conn, &pinyin, 50) {
+            if let Ok(suggests) = query_dict(conn, &pinyin, 50, setting.match_as_same_as_input) {
                 if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
@@ -140,106 +157,172 @@ impl LanguageServer for Backend {
             }
 
             // long sentence
-            if let Ok(Some(suggests)) = query_long_sentence(conn, &pinyin) {
-                if suggests.len() > 0 {
-                    return Ok(Some(CompletionResponse::List(CompletionList {
-                        is_incomplete: true,
-                        items: long_suggests_to_completion_item(suggests, range),
-                    })));
+            if setting.match_long_input {
+                if let Ok(Some(suggests)) =
+                    query_long_sentence(conn, &pinyin, setting.match_as_same_as_input)
+                {
+                    if suggests.len() > 0 {
+                        return Ok(Some(CompletionResponse::List(CompletionList {
+                            is_incomplete: true,
+                            items: long_suggests_to_completion_item(suggests, range),
+                        })));
+                    }
                 }
             }
         };
 
-        Ok(Some(CompletionResponse::Array(vec![])))
+        // Note:
+        // hack ghost item for more completion request from client
+        Ok(Some(CompletionResponse::List(CompletionList {
+            is_incomplete: true,
+            items: vec![CompletionItem {
+                label: String::from("Pinyin Placeholder"),
+                kind: Some(CompletionItemKind::TEXT),
+                filter_text: Some(String::from("‍")),
+                ..Default::default()
+            }],
+        })))
     }
 }
 
 impl Backend {
     async fn turn_completion(&self, params: Value) {
+        let mut setting = self.setting.lock().await;
+
         if let Some(completion_on) = params.get("completion_on") {
             if completion_on.is_boolean() {
-                let mut setting = self.setting.lock().await;
                 (*setting).completion_on = completion_on.as_bool().unwrap_or(setting.completion_on);
-
-                self.client
-                    .log_message(
-                        MessageType::INFO,
-                        &format!("completion_on: {}", setting.completion_on),
-                    )
-                    .await;
             }
         } else {
-            let mut setting = self.setting.lock().await;
             (*setting).completion_on = !setting.completion_on;
+        }
 
+        self.client
+            .log_message(
+                MessageType::INFO,
+                &format!("[ds-pinyin-lsp]: completion_on: {}", setting.completion_on),
+            )
+            .await;
+    }
+
+    async fn change_configuration(&self, params: &Value) {
+        let mut setting = self.setting.lock().await;
+
+        // completion_on
+        if let Some(completion_on) = params.get("completion_on") {
+            (*setting).completion_on = completion_on.as_bool().unwrap_or(setting.completion_on);
             self.client
                 .log_message(
                     MessageType::INFO,
-                    &format!("completion_on: {}", setting.completion_on),
+                    &format!("[ds-pinyin-lsp]: completion_on to {}!", completion_on),
                 )
                 .await;
         }
-    }
 
-    async fn init(&self, initialization_options: &Option<Value>) {
-        if let Some(params) = initialization_options {
-            let mut setting = self.setting.lock().await;
-
-            (*setting).completion_on = params
-                .get("completion_on")
-                .unwrap_or(&Value::Bool(setting.completion_on))
-                .as_bool()
-                .unwrap_or(setting.completion_on);
-
-            let db_path = &Value::String(String::new());
-
-            let db_path = params.get("db_path").unwrap_or(&db_path);
-
-            // invalid db_path
-            if !db_path.is_string() {
-                return self
-                    .client
-                    .show_message(MessageType::ERROR, "ds-pinyin-lsp db_path must be string!")
-                    .await;
-            }
-
+        // db_path
+        if let Some(db_path) = params.get("db_path") {
             if let Some(db_path) = db_path.as_str() {
-                // db_path missing
-                if db_path.is_empty() {
-                    return self
-                        .client
-                        .show_message(MessageType::ERROR, "ds-pinyin-lsp db_path is empty string!")
-                        .await;
-                }
+                if !db_path.is_empty() {
+                    match setting.db_path {
+                        Some(ref old_db_path) if old_db_path == db_path => {
+                            self.client
+                                .log_message(
+                                    MessageType::INFO,
+                                    "[ds-pinyin-lsp]: ignore same db_path!",
+                                )
+                                .await;
+                        }
+                        _ => {
+                            // cache setting
+                            (*setting).db_path = Some(db_path.to_string());
 
-                // cache setting
-                (*setting).db_path = Some(db_path.to_string());
-
-                // open db connection
-                let conn = Connection::open(db_path);
-                if let Ok(conn) = conn {
-                    let mut mutex = self.conn.lock().await;
-                    *mutex = Some(conn);
-                    return self
-                        .client
-                        .log_message(
-                            MessageType::INFO,
-                            "ds-pinyin-lsp db connection initialized!",
+                            // open db connection
+                            let conn = Connection::open(db_path);
+                            if let Ok(conn) = conn {
+                                let mut mutex = self.conn.lock().await;
+                                *mutex = Some(conn);
+                                self.client
+                                    .log_message(
+                                        MessageType::INFO,
+                                        &format!("[ds-pinyin-lsp]: db connection to {}!", db_path),
+                                    )
+                                    .await;
+                            } else if let Err(err) = conn {
+                                self.client
+                                    .show_message(
+                                        MessageType::ERROR,
+                                        &format!(
+                                            "[ds-pinyin-lsp]: open database: {} error: {}",
+                                            db_path, err
+                                        ),
+                                    )
+                                    .await;
+                            }
+                        }
+                    }
+                } else {
+                    // db_path empty
+                    self.client
+                        .show_message(
+                            MessageType::ERROR,
+                            "[ds-pinyin-lsp]: db_path is empty string!",
                         )
                         .await;
-                } else if let Err(err) = conn {
-                    return self
-                        .client
-                        .show_message(MessageType::ERROR, &format!("Open database error: {}", err))
-                        .await;
                 }
+            } else {
+                // invalid db_path
+                self.client
+                    .show_message(
+                        MessageType::ERROR,
+                        "[ds-pinyin-lsp]: db_path must be string!",
+                    )
+                    .await;
             }
-        } else {
-            return self
-                .client
-                .show_message(
-                    MessageType::ERROR,
-                    "ds-pinyin-lsp initialization_options is missing, it must include db_path setting!",
+        }
+
+        // check db_path
+        if setting.db_path.is_none() {
+            self.client
+                .show_message(MessageType::ERROR, "[ds-pinyin-lsp]: db_path is missing!")
+                .await;
+        }
+
+        // show_symbols
+        if let Some(show_symbols) = params.get("show_symbols") {
+            (*setting).show_symbols = show_symbols.as_bool().unwrap_or(setting.show_symbols);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!("[ds-pinyin-lsp]: show_symbols to {}!", show_symbols),
+                )
+                .await;
+        }
+
+        // match_as_same_as_input
+        if let Some(match_as_same_as_input) = params.get("match_as_same_as_input") {
+            (*setting).match_as_same_as_input = match_as_same_as_input
+                .as_bool()
+                .unwrap_or(setting.match_as_same_as_input);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!(
+                        "[ds-pinyin-lsp]: match_as_same_as_input to {}!",
+                        match_as_same_as_input
+                    ),
+                )
+                .await;
+        }
+
+        // match_long_input
+        if let Some(match_long_input) = params.get("match_long_input") {
+            (*setting).match_long_input = match_long_input
+                .as_bool()
+                .unwrap_or(setting.match_long_input);
+            self.client
+                .log_message(
+                    MessageType::INFO,
+                    &format!("[ds-pinyin-lsp]: match_long_input to {}!", match_long_input),
                 )
                 .await;
         }

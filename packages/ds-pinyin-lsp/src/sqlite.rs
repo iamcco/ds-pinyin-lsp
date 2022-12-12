@@ -28,10 +28,11 @@ pub fn query_dict(
     conn: &Connection,
     pinyin: &str,
     size: usize,
+    match_as_same_as_input: bool,
 ) -> Result<Vec<Suggest>, Box<dyn Error>> {
     let mut suggests = query_match_dict(conn, pinyin, size)?;
 
-    if suggests.len() < size {
+    if !match_as_same_as_input && suggests.len() < size {
         let mut res = query_start_match_dict(conn, pinyin, size - suggests.len())?;
         suggests.append(&mut res);
     }
@@ -73,6 +74,7 @@ pub fn query_start_match_dict(
 pub fn query_the_longest_match<'a>(
     conn: &Connection,
     pinyin: &'a str,
+    match_as_same_as_input: bool,
 ) -> Result<Option<(&'a str, Suggest)>, Box<dyn Error>> {
     for i in 1..=pinyin.len() {
         let sub_pinyin = &pinyin[0..=pinyin.len() - i];
@@ -87,18 +89,20 @@ pub fn query_the_longest_match<'a>(
         }
     }
 
-    for i in 1..=pinyin.len() {
-        let sub_pinyin = &pinyin[0..=pinyin.len() - i];
-        let suggests = query_suggests(
-            conn,
-            &format!(
-                "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit 1",
-                sub_pinyin, sub_pinyin
-            )
-        )?;
+    if !match_as_same_as_input {
+        for i in 1..=pinyin.len() {
+            let sub_pinyin = &pinyin[0..=pinyin.len() - i];
+            let suggests = query_suggests(
+                conn,
+                &format!(
+                    "SELECT pinyin, hanzi, priority FROM dict WHERE pinyin BETWEEN '{}' AND '{}{{' ORDER BY priority DESC limit 1",
+                    sub_pinyin, sub_pinyin
+                    )
+                )?;
 
-        for suggest in suggests {
-            return Ok(Some((sub_pinyin, suggest)));
+            for suggest in suggests {
+                return Ok(Some((sub_pinyin, suggest)));
+            }
         }
     }
 

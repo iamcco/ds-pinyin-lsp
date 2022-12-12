@@ -20,13 +20,36 @@
 
 > 如果不启用这个设置，那么在中文字符后面输入拼音会得不到建议选项。
 
-使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
+##### 1. 使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
 
 ```
 :CocInstall coc-ds-pinyin-lsp
 ```
 
-或从 [Release](https://github.com/iamcco/ds-pinyin-lsp/releases/tag/v0.1.0) 下载 `ds-pinyin-lsp` 或
+插件设置项：
+
+- `ds-pinyin-lsp.enabled`: 是否启用插件
+- `ds-pinyin-lsp.prompt`: 是否运行弹窗询问？比如询问下载 `ds-pinyin-lsp` `dict.db3` 文件
+- `ds-pinyin-lsp.server_path`: `ds-pinyin-lsp` 命令或路经
+- `ds-pinyin-lsp.trace.server`: 打开日志项
+- `ds-pinyin-lsp.show_status_bar`: 是否开启状态栏显示
+- `ds-pinyin-lsp.check_on_startup`: 是否检查更新
+- `ds-pinyin-lsp.db_path`: `dict.db3` 文件
+- `ds-pinyin-lsp.completion_on`: 是否自动启用补全
+- `ds-pinyin-lsp.show_symbols`: 是否补全中文标点符号
+- `ds-pinyin-lsp.match_as_same_as_input`: 是否只显示完全匹配结果，比如: 输入 `pinyin` 会只显示 `拼音` 选项，不会显示 `拼音输入法` 等选项
+- `ds-pinyin-lsp.match_long_input`: 是否显示长句匹配，比如：输入 `nihaonishishei` 在没有补全项的时候会把 `你好` `你是谁` 两个选项拼起来作为补全选项
+
+插件命令：
+
+- `ds-pinyin-lsp.turn-on-completion`: 开启自动补全
+- `ds-pinyin-lsp.turn-off-completion`: 关闭自动补全
+- `ds-pinyin-lsp.toggle-completion`: 切换自动补全
+
+
+##### 2. 不使用扩展
+
+从 [Release](https://github.com/iamcco/ds-pinyin-lsp/releases/tag/v0.1.0) 下载 `ds-pinyin-lsp` 或
 通过 `cargo install ds-pinyin-lsp` 安装 `ds-pinyin-lsp` 然后添加以下配置到 `coc-settings.json`
 
 ``` jsonc
@@ -35,8 +58,11 @@
       "command": "path to ds-pinyin-lsp command",
       "filetypes": ["*"],
       "initializationOptions": {
-        "db_path": "path to dict.db3",
-        "completion_on": true
+        "db_path": "path to dict.db3",   // dict.db3 字典文件
+        "completion_on": true,           // 是否开启自动补全
+        "show_symbols": true,            // 是否补全中文标点符号
+        "match_as_same_as_input": true,  // 是否只显示完全匹配结果，比如: 输入 `pinyin` 会只显示 `拼音` 选项，不会显示 `拼音输入法` 选项
+        "match_long_input": true,        // 是否显示长句匹配，比如：输入 `nihaonishishei` 在没有补全项的时候会把 `你好` `你是谁` 两个选项拼起来作为补全选项
       }
     }
   }

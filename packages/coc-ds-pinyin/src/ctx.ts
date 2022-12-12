@@ -56,22 +56,29 @@ export class Ctx {
       },
       {
         documentSelector: ['*'],
-        initializationOptions: {
-          db_path: workspace.getConfiguration(extensionName).get('db_path') || join(this.extCtx.storagePath, dbName),
-          completion_on: workspace.getConfiguration(extensionName).get('completion_on', true),
-        },
+        initializationOptions: this.configuration,
       },
     );
 
     this.client = client;
 
-    this.extCtx.subscriptions.push({
-      dispose: () => {
-        if (this.client) {
-          this.client.stop();
+    this.extCtx.subscriptions.push(
+      workspace.onDidChangeConfiguration((evt) => {
+        if (!evt.affectsConfiguration(extensionName) || !this.client?.started) {
+          return;
         }
+        this.client.sendNotification('workspace/didChangeConfiguration', {
+          settings: this.configuration,
+        });
+      }),
+      {
+        dispose: () => {
+          if (this.client) {
+            this.client.stop();
+          }
+        },
       },
-    });
+    );
 
     this.client.start();
   }
@@ -86,20 +93,33 @@ export class Ctx {
     return this.extCtx.subscriptions;
   }
 
+  get configuration() {
+    const config = workspace.getConfiguration(extensionName);
+    const db_path = join(this.extCtx.storagePath, dbName);
+    return {
+      db_path: config.get<string>('db_path') || (existsSync(db_path) ? db_path : ''),
+      completion_on: config.get<boolean>('completion_on', true),
+      show_symbols: config.get<boolean>('show_symbols', true),
+      match_as_same_as_input: config.get<boolean>('match_as_same_as_input', false),
+      match_long_input: config.get<boolean>('match_long_input', true),
+    };
+  }
+
   resolveBin(): string | undefined {
     // 1. from config, custom server path
     // 2. bundled
-    let bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
-    if (!existsSync(bin)) {
-      bin = workspace.getConfiguration(extensionName).get<string>('server_path', '');
+    let bin = workspace.getConfiguration(extensionName).get<string>('server_path', '');
 
-      if (bin) {
-        if (bin?.startsWith('~/')) {
-          bin = bin.replace('~', homedir());
-        }
-
-        bin = which.sync(bin, { nothrow: true }) || bin;
+    if (bin) {
+      if (bin?.startsWith('~/')) {
+        bin = bin.replace('~', homedir());
       }
+
+      bin = which.sync(bin, { nothrow: true }) || bin;
+    }
+
+    if (!bin || !existsSync(bin)) {
+      bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
     }
 
     if (!bin) {
