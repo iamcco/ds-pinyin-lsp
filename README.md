@@ -29,6 +29,7 @@
 - `ds-pinyin-lsp.server_path`: `ds-pinyin-lsp` 命令或路经
 - `ds-pinyin-lsp.trace.server`: 打开日志项
 - `ds-pinyin-lsp.show_status_bar`: 是否开启状态栏显示
+- `ds-pinyin-lsp.status_bar_flag`: 状态栏标志，默认 `Pinyin`
 - `ds-pinyin-lsp.check_on_startup`: 是否检查更新
 - `ds-pinyin-lsp.db_path`: `dict.db3` 文件
 - `ds-pinyin-lsp.completion_on`: 是否自动启用补全

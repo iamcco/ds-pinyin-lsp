@@ -15,6 +15,7 @@
 - `ds-pinyin-lsp.server_path`: Path to ds-pinyin-lsp command
 - `ds-pinyin-lsp.trace.server`: Trace level of log
 - `ds-pinyin-lsp.show_status_bar`: Show Pinyin in status bar
+- `ds-pinyin-lsp.status_bar_flag`: Flag show in status bar
 - `ds-pinyin-lsp.check_on_startup`: Check ds-pinyin-lsp release on start up
 - `ds-pinyin-lsp.db_path`: db path
 - `ds-pinyin-lsp.completion_on`: If enable auto completion
@@ -27,4 +28,8 @@
 - `ds-pinyin-lsp.turn-on-completion`: Enable auto completion
 - `ds-pinyin-lsp.turn-off-completion`: Disable auto completion
 - `ds-pinyin-lsp.toggle-completion`: Toggle auto completion
+
+## Reference
+
+- Project code template [coc-rust-analyzer](https://github.com/fannheyward/coc-rust-analyzer)
 

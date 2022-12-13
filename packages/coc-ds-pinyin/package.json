@@ -49,7 +49,7 @@
         "ds-pinyin-lsp.status_bar_flag": {
           "type": "string",
           "default": "Pinyin",
-          "description": "Flat show in status bar"
+          "description": "Flag show in status bar"
         },
         "ds-pinyin-lsp.db_path": {
           "type": "string",
