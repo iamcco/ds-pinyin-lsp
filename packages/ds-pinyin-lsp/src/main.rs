@@ -147,7 +147,12 @@ impl LanguageServer for Backend {
 
         if let Some(ref conn) = *self.conn.lock().await {
             // dict search match
-            if let Ok(suggests) = query_dict(conn, &pinyin, 50, setting.match_as_same_as_input) {
+            if let Ok(suggests) = query_dict(
+                conn,
+                &pinyin,
+                setting.max_suggest,
+                setting.match_as_same_as_input,
+            ) {
                 if suggests.len() > 0 {
                     return Ok(Some(CompletionResponse::List(CompletionList {
                         is_incomplete: true,
@@ -207,17 +212,6 @@ impl Backend {
 
     async fn change_configuration(&self, params: &Value) {
         let mut setting = self.setting.lock().await;
-
-        // completion_on
-        if let Some(completion_on) = params.get("completion_on") {
-            (*setting).completion_on = completion_on.as_bool().unwrap_or(setting.completion_on);
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    &format!("[ds-pinyin-lsp]: completion_on to {}!", completion_on),
-                )
-                .await;
-        }
 
         // db_path
         if let Some(db_path) = params.get("db_path") {
@@ -287,44 +281,42 @@ impl Backend {
                 .await;
         }
 
-        // show_symbols
-        if let Some(show_symbols) = params.get("show_symbols") {
-            (*setting).show_symbols = show_symbols.as_bool().unwrap_or(setting.show_symbols);
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    &format!("[ds-pinyin-lsp]: show_symbols to {}!", show_symbols),
-                )
-                .await;
-        }
-
-        // match_as_same_as_input
-        if let Some(match_as_same_as_input) = params.get("match_as_same_as_input") {
-            (*setting).match_as_same_as_input = match_as_same_as_input
-                .as_bool()
-                .unwrap_or(setting.match_as_same_as_input);
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    &format!(
-                        "[ds-pinyin-lsp]: match_as_same_as_input to {}!",
-                        match_as_same_as_input
-                    ),
-                )
-                .await;
-        }
-
-        // match_long_input
-        if let Some(match_long_input) = params.get("match_long_input") {
-            (*setting).match_long_input = match_long_input
-                .as_bool()
-                .unwrap_or(setting.match_long_input);
-            self.client
-                .log_message(
-                    MessageType::INFO,
-                    &format!("[ds-pinyin-lsp]: match_long_input to {}!", match_long_input),
-                )
-                .await;
+        for option_key in [
+            "completion_on",
+            "show_symbols",
+            "match_as_same_as_input",
+            "match_long_input",
+            "max_suggest",
+        ] {
+            if let Some(option) = params.get(option_key) {
+                match option_key {
+                    "completion_on" => {
+                        (*setting).completion_on =
+                            option.as_bool().unwrap_or(setting.completion_on);
+                    }
+                    "show_symbols" => {
+                        (*setting).show_symbols = option.as_bool().unwrap_or(setting.show_symbols);
+                    }
+                    "match_as_same_as_input" => {
+                        (*setting).match_as_same_as_input =
+                            option.as_bool().unwrap_or(setting.match_as_same_as_input);
+                    }
+                    "match_long_input" => {
+                        (*setting).match_long_input =
+                            option.as_bool().unwrap_or(setting.match_long_input);
+                    }
+                    "max_suggest" => {
+                        (*setting).max_suggest = option.as_u64().unwrap_or(setting.max_suggest);
+                    }
+                    _ => {}
+                }
+                self.client
+                    .log_message(
+                        MessageType::INFO,
+                        &format!("[ds-pinyin-lsp]: {} to {}!", option_key, option),
+                    )
+                    .await;
+            }
         }
     }
 }

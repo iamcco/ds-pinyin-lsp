@@ -102,6 +102,7 @@ export class Ctx {
       show_symbols: config.get<boolean>('show_symbols', true),
       match_as_same_as_input: config.get<boolean>('match_as_same_as_input', false),
       match_long_input: config.get<boolean>('match_long_input', true),
+      max_suggest: config.get<number>('max_suggest', 50),
     };
   }
 

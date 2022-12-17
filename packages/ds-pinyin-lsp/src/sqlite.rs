@@ -27,13 +27,14 @@ fn query_suggests(conn: &Connection, query: &str) -> Result<Vec<Suggest>, Box<dy
 pub fn query_dict(
     conn: &Connection,
     pinyin: &str,
-    size: usize,
+    size: u64,
     match_as_same_as_input: bool,
 ) -> Result<Vec<Suggest>, Box<dyn Error>> {
     let mut suggests = query_match_dict(conn, pinyin, size)?;
 
-    if !match_as_same_as_input && suggests.len() < size {
-        let mut res = query_start_match_dict(conn, pinyin, size - suggests.len())?;
+    let len = suggests.len() as u64;
+    if !match_as_same_as_input && len < size {
+        let mut res = query_start_match_dict(conn, pinyin, size - len)?;
         suggests.append(&mut res);
     }
 
@@ -44,7 +45,7 @@ pub fn query_dict(
 pub fn query_match_dict(
     conn: &Connection,
     pinyin: &str,
-    size: usize,
+    size: u64,
 ) -> Result<Vec<Suggest>, Box<dyn Error>> {
     query_suggests(
         conn,
@@ -59,7 +60,7 @@ pub fn query_match_dict(
 pub fn query_start_match_dict(
     conn: &Connection,
     pinyin: &str,
-    size: usize,
+    size: u64,
 ) -> Result<Vec<Suggest>, Box<dyn Error>> {
     query_suggests(
         conn,

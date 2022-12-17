@@ -76,6 +76,11 @@
           "default": true,
           "description": "If show items for the long input"
         },
+        "ds-pinyin-lsp.max_suggest": {
+          "type": "integer",
+          "default": 50,
+          "description": "Max number of autocompletion items"
+        },
         "ds-pinyin-lsp.server_path": {
           "type": "string",
           "default": "",
