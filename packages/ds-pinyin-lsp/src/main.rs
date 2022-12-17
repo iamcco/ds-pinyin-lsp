@@ -6,6 +6,7 @@ use ds_pinyin_lsp::utils::{
     suggests_to_completion_item, symbols_to_completion_item,
 };
 use lsp_document::{apply_change, IndexedText, TextAdapter};
+use regex::Regex;
 use rusqlite::Connection;
 use serde_json::Value;
 use tokio::sync::Mutex;
@@ -124,10 +125,36 @@ impl LanguageServer for Backend {
                 // check symbol
                 if let Some(last_char) = pre_line.chars().last() {
                     if let Some(symbols) = self.symbols.get(&last_char) {
-                        return Ok(Some(CompletionResponse::List(CompletionList {
-                            is_incomplete: true,
-                            items: symbols_to_completion_item(last_char, symbols, position),
-                        })));
+                        // show_symbols_by_n_times
+                        let times = setting.show_symbols_by_n_times;
+                        if times > 0
+                            && pre_line.len() as u64 >= times
+                            && Regex::new(&format!(
+                                "{}$",
+                                regex::escape(&String::from(last_char).repeat(times as usize))
+                            ))
+                            .unwrap()
+                            .is_match(pre_line)
+                        {
+                            return Ok(Some(CompletionResponse::List(CompletionList {
+                                is_incomplete: true,
+                                items: symbols_to_completion_item(
+                                    last_char, symbols, position, times,
+                                ),
+                            })));
+                        }
+                        // show_symbols_only_follow_by_hanzi
+                        if !setting.show_symbols_only_follow_by_hanzi
+                            || (pre_line.len() > 1
+                                && Regex::new(r"\p{Han}$")
+                                    .unwrap()
+                                    .is_match(&pre_line[..=pre_line.len() - 2]))
+                        {
+                            return Ok(Some(CompletionResponse::List(CompletionList {
+                                is_incomplete: true,
+                                items: symbols_to_completion_item(last_char, symbols, position, 1),
+                            })));
+                        }
                     }
                 }
             }
@@ -284,6 +311,8 @@ impl Backend {
         for option_key in [
             "completion_on",
             "show_symbols",
+            "show_symbols_only_follow_by_hanzi",
+            "show_symbols_by_n_times",
             "match_as_same_as_input",
             "match_long_input",
             "max_suggest",
@@ -296,6 +325,15 @@ impl Backend {
                     }
                     "show_symbols" => {
                         (*setting).show_symbols = option.as_bool().unwrap_or(setting.show_symbols);
+                    }
+                    "show_symbols_only_follow_by_hanzi" => {
+                        (*setting).show_symbols_only_follow_by_hanzi = option
+                            .as_bool()
+                            .unwrap_or(setting.show_symbols_only_follow_by_hanzi);
+                    }
+                    "show_symbols_by_n_times" => {
+                        (*setting).show_symbols_by_n_times =
+                            option.as_u64().unwrap_or(setting.show_symbols_by_n_times);
                     }
                     "match_as_same_as_input" => {
                         (*setting).match_as_same_as_input =

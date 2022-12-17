@@ -100,6 +100,8 @@ export class Ctx {
       db_path: config.get<string>('db_path') || (existsSync(db_path) ? db_path : ''),
       completion_on: config.get<boolean>('completion_on', true),
       show_symbols: config.get<boolean>('show_symbols', true),
+      show_symbols_only_follow_by_hanzi: config.get<boolean>('show_symbols_only_follow_by_hanzi', false),
+      show_symbols_by_n_times: config.get<number>('show_symbols_by_n_times', 0),
       match_as_same_as_input: config.get<boolean>('match_as_same_as_input', false),
       match_long_input: config.get<boolean>('match_long_input', true),
       max_suggest: config.get<number>('max_suggest', 50),

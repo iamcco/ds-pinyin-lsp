@@ -66,6 +66,16 @@
           "default": true,
           "description": "If show Chinese symbols"
         },
+        "ds-pinyin-lsp.show_symbols_only_follow_by_hanzi": {
+          "type": "boolean",
+          "default": false,
+          "description": "If only show Chinese symbols follow by hanzi"
+        },
+        "ds-pinyin-lsp.show_symbols_by_n_times": {
+          "type": "number",
+          "default": 0,
+          "description": "If show Chinese symbols by input n times"
+        },
         "ds-pinyin-lsp.match_as_same_as_input": {
           "type": "boolean",
           "default": false,

@@ -131,6 +131,7 @@ pub fn symbols_to_completion_item(
     symbol: char,
     symbols: Ref<char, Vec<String>>,
     position: Position,
+    times: u64,
 ) -> Vec<CompletionItem> {
     symbols
         .iter()
@@ -144,7 +145,7 @@ pub fn symbols_to_completion_item(
                 Range::new(
                     Position {
                         line: position.line,
-                        character: position.character - 1,
+                        character: position.character - times as u32,
                     },
                     position,
                 ),

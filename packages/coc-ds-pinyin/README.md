@@ -20,6 +20,8 @@
 - `ds-pinyin-lsp.db_path`: db path
 - `ds-pinyin-lsp.completion_on`: If enable auto completion
 - `ds-pinyin-lsp.show_symbols`: If show Chinese symbols
+- `ds-pinyin-lsp.show_symbols_only_follow_by_hanzi`: If only show Chinese symbols follow by hanzi
+- `ds-pinyin-lsp.show_symbols_by_n_times`: If show Chinese symbols by input n times
 - `ds-pinyin-lsp.match_as_same_as_input`: If only show the items match the same as input
 - `ds-pinyin-lsp.match_long_input`: If show items for the long input
 - `ds-pinyin-lsp.max_suggest`: Max number of autocompletion items
