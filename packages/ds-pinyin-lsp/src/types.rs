@@ -1,3 +1,5 @@
+use std::error::Error;
+
 pub struct Suggest {
     pub pinyin: String,
     pub hanzi: String,
@@ -18,11 +20,11 @@ impl Suggest {
 pub struct Setting {
     /// 是否开启自动补全
     pub completion_on: bool,
-    /// 是否补全中文字符
+    /// 是否补全中文符号
     pub show_symbols: bool,
-    /// 是否只有在汉字后面才显示中文字符，只有 show_symbols 为 true 才生效
+    /// 是否只有在汉字后面才显示中文符号，只有 show_symbols 为 true 才生效
     pub show_symbols_only_follow_by_hanzi: bool,
-    /// 是否在输入 n 遍的时候才显示中文字符，只有 show_symbols 为 true 才生效
+    /// 是否在输入 n 遍的时候才显示中文符号，只有 show_symbols 为 true 才生效
     /// 设置为 0 则不生效
     pub show_symbols_by_n_times: u64,
     /// 自动补全是否只显示完全匹配结果
@@ -49,3 +51,5 @@ impl Setting {
         }
     }
 }
+
+pub type QueryResult = Result<Vec<Suggest>, Box<dyn Error>>;

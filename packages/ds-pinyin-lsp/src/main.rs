@@ -29,13 +29,7 @@ impl LanguageServer for Backend {
         if let Some(initialization_options) = params.initialization_options {
             self.change_configuration(&initialization_options).await;
         } else {
-            self
-                .client
-                .show_message(
-                    MessageType::ERROR,
-                    "[ds-pinyin-lsp]: initialization_options is missing, it must include db_path setting!",
-                )
-                .await;
+            self.error("[ds-pinyin-lsp]: initialization_options is missing, it must include db_path setting!").await;
         }
 
         Ok(InitializeResult {
@@ -97,9 +91,7 @@ impl LanguageServer for Backend {
         // remove close document
         self.documents.remove(&uri);
 
-        self.client
-            .log_message(MessageType::INFO, &format!("Close file: {}", &uri))
-            .await;
+        self.info(&format!("Close file: {}", &uri)).await;
     }
 
     async fn completion(&self, params: CompletionParams) -> Result<Option<CompletionResponse>> {
@@ -148,7 +140,7 @@ impl LanguageServer for Backend {
                             || (pre_line.len() > 1
                                 && Regex::new(r"\p{Han}$")
                                     .unwrap()
-                                    .is_match(&pre_line[..=pre_line.len() - 2]))
+                                    .is_match(&pre_line[..pre_line.len() - 1]))
                         {
                             return Ok(Some(CompletionResponse::List(CompletionList {
                                 is_incomplete: true,
@@ -229,12 +221,11 @@ impl Backend {
             (*setting).completion_on = !setting.completion_on;
         }
 
-        self.client
-            .log_message(
-                MessageType::INFO,
-                &format!("[ds-pinyin-lsp]: completion_on: {}", setting.completion_on),
-            )
-            .await;
+        self.info(&format!(
+            "[ds-pinyin-lsp]: completion_on: {}",
+            setting.completion_on
+        ))
+        .await;
     }
 
     async fn change_configuration(&self, params: &Value) {
@@ -246,12 +237,7 @@ impl Backend {
                 if !db_path.is_empty() {
                     match setting.db_path {
                         Some(ref old_db_path) if old_db_path == db_path => {
-                            self.client
-                                .log_message(
-                                    MessageType::INFO,
-                                    "[ds-pinyin-lsp]: ignore same db_path!",
-                                )
-                                .await;
+                            self.info("[ds-pinyin-lsp]: ignore same db_path!").await;
                         }
                         _ => {
                             // cache setting
@@ -262,50 +248,34 @@ impl Backend {
                             if let Ok(conn) = conn {
                                 let mut mutex = self.conn.lock().await;
                                 *mutex = Some(conn);
-                                self.client
-                                    .log_message(
-                                        MessageType::INFO,
-                                        &format!("[ds-pinyin-lsp]: db connection to {}!", db_path),
-                                    )
-                                    .await;
+                                self.info(&format!(
+                                    "[ds-pinyin-lsp]: db connection to {}!",
+                                    db_path
+                                ))
+                                .await;
                             } else if let Err(err) = conn {
-                                self.client
-                                    .show_message(
-                                        MessageType::ERROR,
-                                        &format!(
-                                            "[ds-pinyin-lsp]: open database: {} error: {}",
-                                            db_path, err
-                                        ),
-                                    )
-                                    .await;
+                                self.error(&format!(
+                                    "[ds-pinyin-lsp]: open database: {} error: {}",
+                                    db_path, err
+                                ))
+                                .await;
                             }
                         }
                     }
                 } else {
                     // db_path empty
-                    self.client
-                        .show_message(
-                            MessageType::ERROR,
-                            "[ds-pinyin-lsp]: db_path is empty string!",
-                        )
+                    self.error("[ds-pinyin-lsp]: db_path is empty string!")
                         .await;
                 }
             } else {
                 // invalid db_path
-                self.client
-                    .show_message(
-                        MessageType::ERROR,
-                        "[ds-pinyin-lsp]: db_path must be string!",
-                    )
-                    .await;
+                self.error("[ds-pinyin-lsp]: db_path must be string!").await;
             }
         }
 
         // check db_path
         if setting.db_path.is_none() {
-            self.client
-                .show_message(MessageType::ERROR, "[ds-pinyin-lsp]: db_path is missing!")
-                .await;
+            self.error("[ds-pinyin-lsp]: db_path is missing!").await;
         }
 
         for option_key in [
@@ -348,14 +318,19 @@ impl Backend {
                     }
                     _ => {}
                 }
-                self.client
-                    .log_message(
-                        MessageType::INFO,
-                        &format!("[ds-pinyin-lsp]: {} to {}!", option_key, option),
-                    )
-                    .await;
+
+                self.info(&format!("[ds-pinyin-lsp]: {} to {}!", option_key, option))
+                    .await
             }
         }
+    }
+
+    async fn info(&self, message: &str) {
+        self.client.log_message(MessageType::INFO, message).await;
+    }
+
+    async fn error(&self, message: &str) {
+        self.client.log_message(MessageType::ERROR, message).await;
     }
 }
 

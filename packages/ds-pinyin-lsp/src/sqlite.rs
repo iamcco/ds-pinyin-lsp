@@ -2,10 +2,10 @@ use std::error::Error;
 
 use rusqlite::Connection;
 
-use crate::types::Suggest;
+use crate::types::{QueryResult, Suggest};
 
 /// query suggest
-fn query_suggests(conn: &Connection, query: &str) -> Result<Vec<Suggest>, Box<dyn Error>> {
+fn query_suggests(conn: &Connection, query: &str) -> QueryResult {
     let mut stmt = conn.prepare(query)?;
 
     let row_iter = stmt.query_map([], |row| {
@@ -29,7 +29,7 @@ pub fn query_dict(
     pinyin: &str,
     size: u64,
     match_as_same_as_input: bool,
-) -> Result<Vec<Suggest>, Box<dyn Error>> {
+) -> QueryResult {
     let mut suggests = query_match_dict(conn, pinyin, size)?;
 
     let len = suggests.len() as u64;
@@ -42,11 +42,7 @@ pub fn query_dict(
 }
 
 /// query match in dict table
-pub fn query_match_dict(
-    conn: &Connection,
-    pinyin: &str,
-    size: u64,
-) -> Result<Vec<Suggest>, Box<dyn Error>> {
+pub fn query_match_dict(conn: &Connection, pinyin: &str, size: u64) -> QueryResult {
     query_suggests(
         conn,
         &format!(
@@ -57,11 +53,7 @@ pub fn query_match_dict(
 }
 
 /// query start match in dict table
-pub fn query_start_match_dict(
-    conn: &Connection,
-    pinyin: &str,
-    size: u64,
-) -> Result<Vec<Suggest>, Box<dyn Error>> {
+pub fn query_start_match_dict(conn: &Connection, pinyin: &str, size: u64) -> QueryResult {
     query_suggests(
         conn,
         &format!(
