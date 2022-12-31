@@ -62,6 +62,8 @@
       "initializationOptions": {
         "db_path": "path to dict.db3",                             // dict.db3 字典文件
         "completion_on": true,                                     // 是否开启自动补全
+        "completion_around_mode":                    // 是否启用环绕（光标在汉字（包括中文标点符号）开头/中间/结尾）补全模式
+        "completion_trigger_characters":             // 触发补全字符，配合 completion_around_mode 使用，在启用环绕模式后，可以通过输入触发补全字符启用自动补全
         "show_symbols": true,                                      // 是否补全中文标点符号
         "ds-pinyin-lsp.show_symbols_only_follow_by_hanzi": false,  // 是否只在中文后面补全中文符号
         "ds-pinyin-lsp.show_symbols_by_n_times": 0,                // 是否在输入 `n` 次符号后才显示中文符号补全选项，`0` 表示不开启先选
