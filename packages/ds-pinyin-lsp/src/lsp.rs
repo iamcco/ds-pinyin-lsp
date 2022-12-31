@@ -173,13 +173,13 @@ impl LanguageServer for Backend {
 
         // 环绕模式
         let around_completion = Regex::new(&format!(
-            r"(\p{{Han}}|{})(\s*\w+\s+)*[a-zA-Z]+$",
+            r#"(\p{{Han}}|{})((\w|'|"|`)*\s*)*[a-zA-Z]+$"#,
             self.chinese_symbols
         ))
         .unwrap()
         .is_match(backward_line)
             || Regex::new(&format!(
-                r"^(\s*\w+\s*)*(\p{{Han}}|{})",
+                r#"^((\w|'|"|`)*\s*)*(\p{{Han}}|{})"#,
                 self.chinese_symbols
             ))
             .unwrap()
