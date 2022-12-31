@@ -304,8 +304,10 @@ impl Backend {
                             option.as_bool().unwrap_or(setting.completion_around_mode);
                     }
                     "completion_trigger_characters" => {
-                        (*setting).completion_trigger_characters =
-                            option.as_str().unwrap_or("").to_string();
+                        (*setting).completion_trigger_characters = option
+                            .as_str()
+                            .unwrap_or(&setting.completion_trigger_characters)
+                            .to_string();
                     }
                     "show_symbols" => {
                         (*setting).show_symbols = option.as_bool().unwrap_or(setting.show_symbols);
