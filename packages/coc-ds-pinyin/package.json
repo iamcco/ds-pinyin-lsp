@@ -1,6 +1,6 @@
 {
   "name": "coc-ds-pinyin-lsp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "pinyin input support for (Neo)vim",
   "author": "iamcco <ooiss@qq.com>",
   "license": "MIT",
@@ -60,6 +60,16 @@
           "type": "boolean",
           "default": true,
           "description": "If enable auto completion"
+        },
+        "ds-pinyin-lsp.completion_around_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "If enable around mode for autocompletion"
+        },
+        "ds-pinyin-lsp.completion_trigger_characters": {
+          "type": "string",
+          "default": "",
+          "description": "Trigger characters for trigger autocompletion"
         },
         "ds-pinyin-lsp.show_symbols": {
           "type": "boolean",

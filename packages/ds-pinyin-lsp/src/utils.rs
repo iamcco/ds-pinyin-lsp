@@ -10,23 +10,57 @@ use tower_lsp::lsp_types::{
 
 use crate::{sqlite::query_the_longest_match, types::Suggest};
 
-pub fn get_pre_line<'a>(
-    document: &'a Option<Ref<String, IndexedText<String>>>,
+pub fn get_current_line<'a>(
+    document: &'a Ref<String, IndexedText<String>>,
+    position: &Position,
+) -> Option<(&'a str, &'a str)> {
+    if let Some(backward_line) = get_backward_line(document, position) {
+        return Some((
+            backward_line,
+            get_forward_line(document, position).unwrap_or(""),
+        ));
+    }
+
+    None
+}
+
+/// 获取光标前文字
+pub fn get_backward_line<'a>(
+    document: &'a Ref<String, IndexedText<String>>,
     position: &Position,
 ) -> Option<&'a str> {
-    if let Some(ref document) = document {
-        if let Some(range) = document.lsp_range_to_range(&Range {
-            start: Position {
-                line: position.line,
-                character: 0,
-            },
-            end: Position {
-                line: position.line,
-                character: position.character,
-            },
-        }) {
-            return document.substr(range);
-        }
+    if let Some(range) = document.lsp_range_to_range(&Range {
+        start: Position {
+            line: position.line,
+            character: 0,
+        },
+        end: Position {
+            line: position.line,
+            character: position.character,
+        },
+    }) {
+        return document.substr(range);
+    }
+
+    None
+}
+
+/// 获取光标后文字
+pub fn get_forward_line<'a>(
+    document: &'a Ref<String, IndexedText<String>>,
+    position: &Position,
+) -> Option<&'a str> {
+    if let Some(range) = document.lsp_range_to_range(&Range {
+        start: Position {
+            line: position.line,
+            character: position.character,
+        },
+        end: Position {
+            line: position.line + 1,
+            character: 0,
+        },
+    }) {
+        return document.substr(range);
     }
 
     None
