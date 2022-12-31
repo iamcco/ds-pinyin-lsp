@@ -62,11 +62,11 @@
       "initializationOptions": {
         "db_path": "path to dict.db3",                             // dict.db3 字典文件
         "completion_on": true,                                     // 是否开启自动补全
-        "completion_around_mode":                    // 是否启用环绕（光标在汉字（包括中文标点符号）开头/中间/结尾）补全模式
-        "completion_trigger_characters":             // 触发补全字符，配合 completion_around_mode 使用，在启用环绕模式后，可以通过输入触发补全字符启用自动补全
+        "completion_around_mode":                                  // 是否启用环绕（光标在汉字（包括中文标点符号）开头/中间/结尾）补全模式
+        "completion_trigger_characters":                           // 触发补全字符，配合 completion_around_mode 使用，在启用环绕模式后，可以通过输入触发补全字符启用自动补全
         "show_symbols": true,                                      // 是否补全中文标点符号
-        "ds-pinyin-lsp.show_symbols_only_follow_by_hanzi": false,  // 是否只在中文后面补全中文符号
-        "ds-pinyin-lsp.show_symbols_by_n_times": 0,                // 是否在输入 `n` 次符号后才显示中文符号补全选项，`0` 表示不开启先选
+        "show_symbols_only_follow_by_hanzi": false,                // 是否只在中文后面补全中文符号
+        "show_symbols_by_n_times": 0,                              // 是否在输入 `n` 次符号后才显示中文符号补全选项，`0` 表示不开启先选
         "match_as_same_as_input": true,                            // 是否只显示完全匹配结果，比如: 输入 `pinyin` 会只显示 `拼音` 选项，不会显示 `拼音输入法` 选项
         "match_long_input": true,                                  // 是否显示长句匹配，比如：输入 `nihaonishishei` 在没有补全项的时候会把 `你好` `你是谁` 两个选项拼起来作为补全选项
         "max_suggest": 50                                          // 中文补全列表最大显示个数
