@@ -1,3 +1,15 @@
+# 2022-12-31 v0.4.0
+
+LSP 新增设置项
+
+- `completion_around_mode`: 是否启用环绕（光标在汉字（包括中文标点符号）开头/中间/结尾）补全模式
+- `completion_trigger_characters`: 触发补全字符，配合 `completion_around_mode` 使用，在启用环绕模式后，可以通过输入触发补全字符启用自动补全
+
+COC.nvim 插件新增设置项
+
+- `ds-pinyin-lsp.completion_around_mode`: 是否启用环绕（光标在汉字（包括中文标点符号）开头/中间/结尾）补全模式
+- `ds-pinyin-lsp.completion_trigger_characters`: 触发补全字符，配合 `completion_around_mode` 使用，在启用环绕模式后，可以通过输入触发补全字符启用自动补全
+
 # 2022-12-17 v0.3.0
 
 LSP 新增设置项
