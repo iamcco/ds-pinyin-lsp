@@ -12,7 +12,7 @@ AUTH="Authorization: token $GITHUB_API_TOKEN"
 # upload assets
 cd ./packages/ds-pinyin-lsp/target/aarch64-apple-darwin/release/
 
-declare -a files=("ds-pinyin-lsp_v0.2.0_aarch64-apple-darwin.zip")
+declare -a files=("ds-pinyin-lsp_v0.4.0_aarch64-apple-darwin.zip")
 
 # Validate token.
 curl -o /dev/null -sH "$AUTH" $GH_REPO || { echo "Error: Invalid repo, token or network issue!";  exit 1; }
