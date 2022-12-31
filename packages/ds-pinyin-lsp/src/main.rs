@@ -2,14 +2,14 @@ use dashmap::DashMap;
 use ds_pinyin_lsp::sqlite::query_dict;
 use ds_pinyin_lsp::types::Setting;
 use ds_pinyin_lsp::utils::{
-    get_pinyin, get_pre_line, long_suggests_to_completion_item, query_long_sentence,
+    get_current_line, get_pinyin, long_suggests_to_completion_item, query_long_sentence,
     suggests_to_completion_item, symbols_to_completion_item,
 };
 use lsp_document::{apply_change, IndexedText, TextAdapter};
 use regex::Regex;
 use rusqlite::Connection;
 use serde_json::Value;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -21,6 +21,7 @@ struct Backend {
     conn: Mutex<Option<Connection>>,
     documents: DashMap<String, IndexedText<String>>,
     symbols: DashMap<char, Vec<String>>,
+    chinese_symbols: String,
 }
 
 #[tower_lsp::async_trait]
@@ -87,10 +88,8 @@ impl LanguageServer for Backend {
 
     async fn did_close(&self, params: DidCloseTextDocumentParams) {
         let uri = params.text_document.uri.to_string();
-
         // remove close document
         self.documents.remove(&uri);
-
         self.info(&format!("Close file: {}", &uri)).await;
     }
 
@@ -101,32 +100,40 @@ impl LanguageServer for Backend {
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
-        let position = params.text_document_position.position;
         let uri = params.text_document_position.text_document.uri.to_string();
         let document = self.documents.get(&uri);
-        let pre_line = get_pre_line(&document, &position).unwrap_or("");
-
-        if pre_line.is_empty() {
+        if let None = document {
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
-        let pinyin = get_pinyin(pre_line).unwrap_or(String::new());
+        let position = params.text_document_position.position;
+        let (backward_line, forward_line) = get_current_line(
+            document.as_ref().unwrap(), // document will never be None here
+            &position,
+        )
+        .unwrap_or(("", ""));
+
+        if backward_line.is_empty() {
+            return Ok(Some(CompletionResponse::Array(vec![])));
+        }
+
+        let pinyin = get_pinyin(backward_line).unwrap_or(String::new());
 
         if pinyin.is_empty() {
             if setting.show_symbols {
                 // check symbol
-                if let Some(last_char) = pre_line.chars().last() {
+                if let Some(last_char) = backward_line.chars().last() {
                     if let Some(symbols) = self.symbols.get(&last_char) {
                         // show_symbols_by_n_times
                         let times = setting.show_symbols_by_n_times;
                         if times > 0
-                            && pre_line.len() as u64 >= times
+                            && backward_line.len() as u64 >= times
                             && Regex::new(&format!(
                                 "{}$",
                                 regex::escape(&String::from(last_char).repeat(times as usize))
                             ))
                             .unwrap()
-                            .is_match(pre_line)
+                            .is_match(backward_line)
                         {
                             return Ok(Some(CompletionResponse::List(CompletionList {
                                 is_incomplete: true,
@@ -137,10 +144,10 @@ impl LanguageServer for Backend {
                         }
                         // show_symbols_only_follow_by_hanzi
                         if !setting.show_symbols_only_follow_by_hanzi
-                            || (pre_line.len() > 1
+                            || (backward_line.len() > 1
                                 && Regex::new(r"\p{Han}$")
                                     .unwrap()
-                                    .is_match(&pre_line[..pre_line.len() - 1]))
+                                    .is_match(&backward_line[..backward_line.len() - 1]))
                         {
                             return Ok(Some(CompletionResponse::List(CompletionList {
                                 is_incomplete: true,
@@ -155,11 +162,46 @@ impl LanguageServer for Backend {
             return Ok(Some(CompletionResponse::Array(vec![])));
         }
 
+        // 触发模式
+        let trigger_completion = !setting.completion_trigger_characters.is_empty()
+            && Regex::new(&format!(
+                "{}[a-zA-Z]+$",
+                regex::escape(&setting.completion_trigger_characters)
+            ))
+            .unwrap()
+            .is_match(backward_line);
+
+        // 环绕模式
+        let around_completion = Regex::new(&format!(
+            r"(\p{{Han}}|{})(\s*\w+\s+)*[a-zA-Z]+$",
+            self.chinese_symbols
+        ))
+        .unwrap()
+        .is_match(backward_line)
+            || Regex::new(&format!(
+                r"^(\s*\w+\s*)*(\p{{Han}}|{})",
+                self.chinese_symbols
+            ))
+            .unwrap()
+            .is_match(forward_line);
+
+        // 开启环绕补全模式，但是：
+        // - 不符合环绕模式
+        // - 不符合触发模式
+        if setting.completion_around_mode && !around_completion && !trigger_completion {
+            return Ok(Some(CompletionResponse::Array(vec![])));
+        }
+
         // pinyin range
         let range = Range::new(
             Position {
                 line: position.line,
-                character: position.character - pinyin.len() as u32,
+                character: position.character
+                    - (if trigger_completion {
+                        pinyin.len() + setting.completion_trigger_characters.len()
+                    } else {
+                        pinyin.len()
+                    }) as u32,
             },
             position,
         );
@@ -231,55 +273,11 @@ impl Backend {
     async fn change_configuration(&self, params: &Value) {
         let mut setting = self.setting.lock().await;
 
-        // db_path
-        if let Some(db_path) = params.get("db_path") {
-            if let Some(db_path) = db_path.as_str() {
-                if !db_path.is_empty() {
-                    match setting.db_path {
-                        Some(ref old_db_path) if old_db_path == db_path => {
-                            self.info("[ds-pinyin-lsp]: ignore same db_path!").await;
-                        }
-                        _ => {
-                            // cache setting
-                            (*setting).db_path = Some(db_path.to_string());
-
-                            // open db connection
-                            let conn = Connection::open(db_path);
-                            if let Ok(conn) = conn {
-                                let mut mutex = self.conn.lock().await;
-                                *mutex = Some(conn);
-                                self.info(&format!(
-                                    "[ds-pinyin-lsp]: db connection to {}!",
-                                    db_path
-                                ))
-                                .await;
-                            } else if let Err(err) = conn {
-                                self.error(&format!(
-                                    "[ds-pinyin-lsp]: open database: {} error: {}",
-                                    db_path, err
-                                ))
-                                .await;
-                            }
-                        }
-                    }
-                } else {
-                    // db_path empty
-                    self.error("[ds-pinyin-lsp]: db_path is empty string!")
-                        .await;
-                }
-            } else {
-                // invalid db_path
-                self.error("[ds-pinyin-lsp]: db_path must be string!").await;
-            }
-        }
-
-        // check db_path
-        if setting.db_path.is_none() {
-            self.error("[ds-pinyin-lsp]: db_path is missing!").await;
-        }
-
         for option_key in [
+            "db_path",
             "completion_on",
+            "completion_around_mode",
+            "completion_trigger_characters",
             "show_symbols",
             "show_symbols_only_follow_by_hanzi",
             "show_symbols_by_n_times",
@@ -289,9 +287,25 @@ impl Backend {
         ] {
             if let Some(option) = params.get(option_key) {
                 match option_key {
+                    "db_path" => {
+                        if let Some(db_path) = option.as_str() {
+                            self.update_db_path(&mut setting, db_path).await;
+                        } else {
+                            // invalid db_path
+                            self.error("[ds-pinyin-lsp]: db_path must be string!").await;
+                        }
+                    }
                     "completion_on" => {
                         (*setting).completion_on =
                             option.as_bool().unwrap_or(setting.completion_on);
+                    }
+                    "completion_around_mode" => {
+                        (*setting).completion_around_mode =
+                            option.as_bool().unwrap_or(setting.completion_around_mode);
+                    }
+                    "completion_trigger_characters" => {
+                        (*setting).completion_trigger_characters =
+                            option.as_str().unwrap_or("").to_string();
                     }
                     "show_symbols" => {
                         (*setting).show_symbols = option.as_bool().unwrap_or(setting.show_symbols);
@@ -321,6 +335,41 @@ impl Backend {
 
                 self.info(&format!("[ds-pinyin-lsp]: {} to {}!", option_key, option))
                     .await
+            }
+        }
+
+        // check db_path
+        if setting.db_path.is_empty() {
+            self.error("[ds-pinyin-lsp]: db_path is missing!").await;
+        }
+    }
+
+    async fn update_db_path<'a>(&self, setting: &mut MutexGuard<'a, Setting>, db_path: &str) {
+        if db_path.is_empty() {
+            self.error("[ds-pinyin-lsp]: db_path is empty string!")
+                .await;
+            return;
+        }
+        if setting.db_path == db_path {
+            self.info("[ds-pinyin-lsp]: ignore same db_path!").await;
+            return;
+        }
+        match Connection::open(db_path) {
+            Ok(conn) => {
+                // cache setting
+                (*setting).db_path = db_path.to_string();
+                // connection
+                let mut mutex = self.conn.lock().await;
+                *mutex = Some(conn);
+                self.info(&format!("[ds-pinyin-lsp]: db connection to {}!", db_path))
+                    .await;
+            }
+            Err(err) => {
+                self.error(&format!(
+                    "[ds-pinyin-lsp]: open database: {} error: {}",
+                    db_path, err
+                ))
+                .await;
             }
         }
     }
@@ -375,6 +424,9 @@ async fn main() {
         conn: Mutex::new(None),
         documents: DashMap::new(),
         symbols,
+        chinese_symbols: String::from(
+            "。|·|……|～|、|，|；|：|？|！|“|”|‘|’|（|）|——|《|》|【|】|¥",
+        ),
     })
     .custom_method("$/turn/completion", Backend::turn_completion)
     .finish();
