@@ -19,6 +19,8 @@
 - `ds-pinyin-lsp.check_on_startup`: Check ds-pinyin-lsp release on start up
 - `ds-pinyin-lsp.db_path`: db path
 - `ds-pinyin-lsp.completion_on`: If enable auto completion
+- `ds-pinyin-lsp.completion_around_mode`: If enable around mode for autocompletion
+- `ds-pinyin-lsp.completion_trigger_characters`: Trigger characters for trigger autocompletion
 - `ds-pinyin-lsp.show_symbols`: If show Chinese symbols
 - `ds-pinyin-lsp.show_symbols_only_follow_by_hanzi`: If only show Chinese symbols follow by hanzi
 - `ds-pinyin-lsp.show_symbols_by_n_times`: If show Chinese symbols by input n times

@@ -99,6 +99,8 @@ export class Ctx {
     return {
       db_path: config.get<string>('db_path') || (existsSync(db_path) ? db_path : ''),
       completion_on: config.get<boolean>('completion_on', true),
+      completion_around_mode: config.get('completion_around_mode', false),
+      completion_trigger_characters: config.get('completion_trigger_characters', ''),
       show_symbols: config.get<boolean>('show_symbols', true),
       show_symbols_only_follow_by_hanzi: config.get<boolean>('show_symbols_only_follow_by_hanzi', false),
       show_symbols_by_n_times: config.get<number>('show_symbols_by_n_times', 0),

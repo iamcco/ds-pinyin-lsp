@@ -24,6 +24,7 @@ pub fn get_current_line<'a>(
     None
 }
 
+/// 获取光标前文字
 pub fn get_backward_line<'a>(
     document: &'a Ref<String, IndexedText<String>>,
     position: &Position,
@@ -44,6 +45,7 @@ pub fn get_backward_line<'a>(
     None
 }
 
+/// 获取光标后文字
 pub fn get_forward_line<'a>(
     document: &'a Ref<String, IndexedText<String>>,
     position: &Position,

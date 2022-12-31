@@ -61,6 +61,16 @@
           "default": true,
           "description": "If enable auto completion"
         },
+        "ds-pinyin-lsp.completion_around_mode": {
+          "type": "boolean",
+          "default": false,
+          "description": "If enable around mode for autocompletion"
+        },
+        "ds-pinyin-lsp.completion_trigger_characters": {
+          "type": "string",
+          "default": "",
+          "description": "Trigger characters for trigger autocompletion"
+        },
         "ds-pinyin-lsp.show_symbols": {
           "type": "boolean",
           "default": true,
