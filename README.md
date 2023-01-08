@@ -12,9 +12,13 @@
 **注意**
 
 - 非专业输入法，不是输入法的代替品，只适合少量需要输入中文的场景。
-- 只支持**全拼**， 需要配合 LSP 客户端使用，比如 coc.nvim / VS Code 等。
+- 只支持**全拼**， 需要配合 LSP 客户端使用，比如 coc.nvim (neo)vim / VS Code / lsp-bridge (Emacs) 等。
 
-## 配合 coc.nvim 使用
+## Emacs 用户可以配合 [lsp-bridge](https://github.com/manateelazycat/lsp-bridge) 使用
+
+`lsp-bridge` 已经添加了对 `ds-pinyin` 的支持
+
+## (neo)vim 用户可以配合 coc.nvim 使用
 
 ##### 1. 使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
 
@@ -80,6 +84,7 @@
 可以通过向服务端发送通知（Notification）来关闭/开启/切换自动补全
 
 - `$/turn/completion`: 参数: `{ completion_on?: boolean }`
+
 
 ## Packages
 
