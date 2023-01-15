@@ -18,7 +18,7 @@
 
 `lsp-bridge` 已经添加了对 `ds-pinyin` 的支持
 
-## (neo)vim 用户可以配合 coc.nvim 使用
+## (neo)vim 用户可以配合 coc.nvim 或者 neovim 内置的 lsp 使用
 
 ##### 1. 使用扩展 [coc-ds-pinyin-lsp](./packages/coc-ds-pinyin)
 
@@ -52,8 +52,25 @@
 - `ds-pinyin-lsp.turn-off-completion`: 关闭自动补全
 - `ds-pinyin-lsp.toggle-completion`: 切换自动补全
 
+##### 2. 使用 neovim 内置的 lsp
 
-##### 2. 不使用扩展
+请先安装 [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig) 插件，具体配置可参考其[文档对应部分](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#ds_pinyin_lsp)的配置。
+
+如果需要配置选项，可参考如下的代码片段：
+
+```lua
+require('lspconfig').ds_pinyin_lsp.setup {
+    init_options = {
+        db_path = "your_path_to_database",
+        completion_on = true,
+        match_as_same_as_input = true,
+    }
+}
+```
+
+可配置项请参考 `coc-settings.json` 的 `initializationOptions` 部分。
+
+##### 3. 不使用扩展
 
 从 [Release](https://github.com/iamcco/ds-pinyin-lsp/releases/tag/v0.1.0) 下载 `ds-pinyin-lsp` 或
 通过 `cargo install ds-pinyin-lsp` 安装 `ds-pinyin-lsp` 然后添加以下配置到 `coc-settings.json`
