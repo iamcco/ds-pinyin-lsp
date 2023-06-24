@@ -123,11 +123,11 @@ export class Ctx {
       bin = which.sync(bin, { nothrow: true }) || bin;
     }
 
-    if (!bin || !existsSync(bin)) {
+    if (!bin) {
       bin = join(this.extCtx.storagePath, process.platform === 'win32' ? `${extensionName}.exe` : extensionName);
     }
 
-    if (!bin) {
+    if (!existsSync(bin)) {
       return;
     }
 
